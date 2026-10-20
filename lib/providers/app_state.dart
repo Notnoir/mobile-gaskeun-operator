@@ -6,6 +6,8 @@ import '../models/waste_submission_model.dart';
 import '../models/reward_model.dart';
 import '../models/iot_sensor_model.dart';
 import '../models/report_model.dart';
+import '../models/iot_device_reading.dart';
+import '../services/iot_sensor_service.dart';
 
 class DemoUserCredential {
   final String email;
@@ -28,6 +30,7 @@ class AppState extends ChangeNotifier {
   UserRole _currentRole = UserRole.operator;
   bool _isAuthenticated = false;
   bool _isLoggedIn = false;
+  bool _isDisposed = false;
 
   UserRole get currentRole => _currentRole;
   bool get isAuthenticated => _isAuthenticated;
@@ -79,6 +82,18 @@ class AppState extends ChangeNotifier {
   String machineName = 'Biodigester Komunal BD-RW05';
   String machineLocation = 'Jl. Kenanga RT 02 / RW 05 (Samping Balai Pertemuan)';
   bool isMachineOnline = true;
+
+  // Firebase IoT Sensor Service
+  final IotSensorService _iotService = IotSensorService(deviceId: 'gaskeun-rw01-01');
+  StreamSubscription<IotDeviceReading?>? _iotSubscription;
+  IotDeviceReading? _latestReading;
+  bool _isUsingRealFirebase = false;
+
+  IotDeviceReading? get latestReading => _latestReading;
+  bool get isDeviceOnline => _latestReading?.isOnline ?? isMachineOnline;
+  bool get isUsingRealFirebase => _isUsingRealFirebase;
+  String? get iotLastError => _iotService.lastError;
+  String get deviceId => _iotService.deviceId;
 
   SensorMetric _temperatureMetric = SensorMetric(
     name: 'Suhu Reaktor',
@@ -163,6 +178,7 @@ class AppState extends ChangeNotifier {
   AppState() {
     _initInitialData();
     _startSensorSimulation();
+    _initFirebaseSensorListener();
   }
 
   void _initInitialData() {
@@ -473,6 +489,257 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void _initFirebaseSensorListener() {
+    try {
+      // 1. Tarik langsung pembacaan terkini saat inisialisasi
+      refreshFirebaseIotData();
+
+      // 2. Dengarkan data live dari path: /gaskeun/v1/devices/gaskeun-rw01-01/latest
+      _iotSubscription = _iotService.streamLatestReading().listen((reading) {
+        if (reading == null) return;
+        _latestReading = reading;
+        _isUsingRealFirebase = true;
+        isMachineOnline = true;
+        _sensorSimulationTimer?.cancel();
+        _sensorSimulationTimer = null;
+        _updateMetricsFromReading(reading);
+        notifyListeners();
+      }, onError: (err) {
+        debugPrint('Firebase IoT stream notice: $err');
+      });
+    } catch (e) {
+      debugPrint('Firebase sensor listener setup notice: $e');
+    }
+  }
+
+  /// Tarik data terbaru langsung dari Firebase secara manual
+  Future<bool> refreshFirebaseIotData() async {
+    try {
+      final reading = await _iotService.fetchLatestReading();
+      if (reading != null) {
+        _latestReading = reading;
+        _isUsingRealFirebase = true;
+        isMachineOnline = true;
+        _sensorSimulationTimer?.cancel();
+        _sensorSimulationTimer = null;
+        _updateMetricsFromReading(reading);
+
+        final history = await _iotService.fetchRecentHistory(limit: 7);
+        if (history.isNotEmpty) {
+          _applyHistoryToMetrics(history);
+        }
+        notifyListeners();
+        return true;
+      }
+    } catch (e) {
+      debugPrint('Error on refreshFirebaseIotData: $e');
+    }
+    notifyListeners();
+    return false;
+  }
+
+  void _applyHistoryToMetrics(List<IotDeviceReading> history) {
+    if (history.length < 2) return;
+    final tempPoints = history.map((e) => e.temperatureC).toList();
+    final pressPoints = history.map((e) => double.parse((e.pressureKpa * 10.0).toStringAsFixed(1))).toList();
+    final mq4HolderPoints = history.map((e) => e.mq4HolderRaw.toDouble()).toList();
+    final mq4BioPoints = history.map((e) => e.mq4BiodigesterRaw.toDouble()).toList();
+    final mq136Points = history.map((e) => e.mq136FilterAmbientRaw.toDouble()).toList();
+
+    _temperatureMetric = SensorMetric(
+      name: _temperatureMetric.name,
+      currentValue: tempPoints.last,
+      unit: _temperatureMetric.unit,
+      maxValue: _temperatureMetric.maxValue,
+      severity: _temperatureMetric.severity,
+      history7Points: tempPoints,
+      sensorType: SensorType.temperature,
+    );
+    _pressureMetric = SensorMetric(
+      name: _pressureMetric.name,
+      currentValue: pressPoints.last,
+      unit: _pressureMetric.unit,
+      maxValue: _pressureMetric.maxValue,
+      severity: _pressureMetric.severity,
+      history7Points: pressPoints,
+      sensorType: SensorType.pressure,
+    );
+    _mq4OutdoorMetric = SensorMetric(
+      name: _mq4OutdoorMetric.name,
+      currentValue: mq4HolderPoints.last,
+      unit: _mq4OutdoorMetric.unit,
+      maxValue: _mq4OutdoorMetric.maxValue,
+      severity: _mq4OutdoorMetric.severity,
+      history7Points: mq4HolderPoints,
+      sensorType: SensorType.mq4Outdoor,
+    );
+    _mq4BiodgesterMetric = SensorMetric(
+      name: _mq4BiodgesterMetric.name,
+      currentValue: mq4BioPoints.last,
+      unit: _mq4BiodgesterMetric.unit,
+      maxValue: _mq4BiodgesterMetric.maxValue,
+      severity: _mq4BiodgesterMetric.severity,
+      history7Points: mq4BioPoints,
+      sensorType: SensorType.mq4Biodigester,
+    );
+    _mq136Metric = SensorMetric(
+      name: _mq136Metric.name,
+      currentValue: mq136Points.last,
+      unit: _mq136Metric.unit,
+      maxValue: _mq136Metric.maxValue,
+      severity: _mq136Metric.severity,
+      history7Points: mq136Points,
+      sensorType: SensorType.mq136,
+    );
+    notifyListeners();
+  }
+
+  void _updateMetricsFromReading(IotDeviceReading r) {
+    // 1. Suhu Reaktor
+    SensorSeverity tempSeverity = SensorSeverity.normal;
+    if (r.temperatureC > 45 || r.temperatureC < 25) {
+      tempSeverity = SensorSeverity.critical;
+    } else if (r.temperatureC > 40) {
+      tempSeverity = SensorSeverity.warning;
+    }
+
+    final newTempHist = List<double>.from(_temperatureMetric.history7Points.sublist(1))
+      ..add(r.temperatureC);
+
+    _temperatureMetric = SensorMetric(
+      name: 'Suhu Reaktor',
+      currentValue: r.temperatureC,
+      unit: '°C',
+      maxValue: 55.0,
+      severity: tempSeverity,
+      history7Points: newTempHist,
+      sensorType: SensorType.temperature,
+    );
+
+    // 2. Tekanan Biogas (kpa -> hpa: 101.3 kpa = 1013 hpa)
+    final pressureHpa = double.parse((r.pressureKpa * 10.0).toStringAsFixed(1));
+    SensorSeverity pressureSeverity = SensorSeverity.normal;
+    if (pressureHpa > 1100 || r.pressureKpa > 110.0) {
+      pressureSeverity = SensorSeverity.critical;
+      _triggerAlert(
+        title: 'Tekanan Biogas Kritis',
+        message: 'Tekanan reaktor mencapai ${r.pressureKpa} kPa (${pressureHpa} hPa). Buka katup pengaman segera!',
+        severity: SensorSeverity.critical,
+      );
+    } else if (pressureHpa > 1030 || r.pressureKpa > 103.0) {
+      pressureSeverity = SensorSeverity.warning;
+    }
+
+    final newPressHist = List<double>.from(_pressureMetric.history7Points.sublist(1))
+      ..add(pressureHpa);
+
+    _pressureMetric = SensorMetric(
+      name: 'Tekanan Biogas',
+      currentValue: pressureHpa,
+      unit: 'hPa',
+      maxValue: 1200.0,
+      severity: pressureSeverity,
+      history7Points: newPressHist,
+      sensorType: SensorType.pressure,
+    );
+
+    // 3. MQ-4 Gas Holder (raw ADC)
+    final mq4Holder = r.mq4HolderRaw.toDouble();
+    SensorSeverity mq4HolderSeverity = SensorSeverity.normal;
+    if (mq4Holder > 600) {
+      mq4HolderSeverity = SensorSeverity.critical;
+      _triggerAlert(
+        title: 'Deteksi Kebocoran Gas Metana!',
+        message: 'Sensor holder mendeteksi gas metana tinggi (ADC: ${r.mq4HolderRaw}). Periksa sambungan pipa!',
+        severity: SensorSeverity.critical,
+      );
+    } else if (mq4Holder > 350) {
+      mq4HolderSeverity = SensorSeverity.warning;
+    }
+
+    final newMq4OutHist = List<double>.from(_mq4OutdoorMetric.history7Points.sublist(1))
+      ..add(mq4Holder);
+
+    _mq4OutdoorMetric = SensorMetric(
+      name: 'Gas Metana (Luar)',
+      currentValue: mq4Holder,
+      unit: 'ADC',
+      maxValue: 1024.0,
+      severity: mq4HolderSeverity,
+      history7Points: newMq4OutHist,
+      sensorType: SensorType.mq4Outdoor,
+    );
+
+    // 4. MQ-4 Biodigester
+    final mq4Bio = r.mq4BiodigesterRaw.toDouble();
+    SensorSeverity mq4BioSeverity = SensorSeverity.normal;
+    if (mq4Bio > 800) {
+      mq4BioSeverity = SensorSeverity.critical;
+    } else if (mq4Bio > 550) {
+      mq4BioSeverity = SensorSeverity.warning;
+    }
+
+    final newMq4BioHist = List<double>.from(_mq4BiodgesterMetric.history7Points.sublist(1))
+      ..add(mq4Bio);
+
+    _mq4BiodgesterMetric = SensorMetric(
+      name: 'Gas Metana (Digester)',
+      currentValue: mq4Bio,
+      unit: 'ADC',
+      maxValue: 1024.0,
+      severity: mq4BioSeverity,
+      history7Points: newMq4BioHist,
+      sensorType: SensorType.mq4Biodigester,
+    );
+
+    // 5. MQ-136 Pasca Filter
+    final mq136 = r.mq136FilterAmbientRaw.toDouble();
+    SensorSeverity mq136Severity = SensorSeverity.normal;
+    if (mq136 > 700) {
+      mq136Severity = SensorSeverity.critical;
+      _triggerAlert(
+        title: 'Filter Gas H₂S Jenuh',
+        message: 'Kadar gas H₂S pasca filter tinggi (ADC: ${r.mq136FilterAmbientRaw}). Media filter perlu segera diganti.',
+        severity: SensorSeverity.warning,
+      );
+    } else if (mq136 > 500) {
+      mq136Severity = SensorSeverity.warning;
+    }
+
+    final newMq136Hist = List<double>.from(_mq136Metric.history7Points.sublist(1))
+      ..add(mq136);
+
+    _mq136Metric = SensorMetric(
+      name: 'H₂S Pasca Filter',
+      currentValue: mq136,
+      unit: 'ADC',
+      maxValue: 1024.0,
+      severity: mq136Severity,
+      history7Points: newMq136Hist,
+      sensorType: SensorType.mq136,
+    );
+  }
+
+  void _triggerAlert({
+    required String title,
+    required String message,
+    required SensorSeverity severity,
+  }) {
+    final exists = _alerts.any((a) => a.title == title && !a.isDismissed);
+    if (!exists) {
+      _alerts.insert(
+        0,
+        PredictiveAlert(
+          id: 'alert-${DateTime.now().millisecondsSinceEpoch}',
+          title: title,
+          message: message,
+          severity: severity,
+          timestamp: DateTime.now(),
+        ),
+      );
+    }
+  }
+
   // Authentication & Login/Logout
   bool login(String email, String password) {
     final cleanEmail = email.trim().toLowerCase();
@@ -686,8 +953,17 @@ class AppState extends ChangeNotifier {
   }
 
   @override
+  void notifyListeners() {
+    if (!_isDisposed) {
+      super.notifyListeners();
+    }
+  }
+
+  @override
   void dispose() {
+    _isDisposed = true;
     _sensorSimulationTimer?.cancel();
+    _iotSubscription?.cancel();
     super.dispose();
   }
 }

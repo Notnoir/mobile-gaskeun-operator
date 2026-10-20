@@ -111,14 +111,84 @@ class OperatorDashboardTab extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Row(
-                      children: const [
-                        Icon(Icons.sensors, size: 16, color: AppColors.primary),
-                        SizedBox(width: 4),
-                        Text('Status IoT: Online (Polling 30s)', style: TextStyle(fontSize: 11, color: AppColors.primaryDark, fontWeight: FontWeight.w600)),
+                      children: [
+                        Icon(
+                          Icons.sensors,
+                          size: 16,
+                          color: state.isDeviceOnline ? AppColors.success : AppColors.primary,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          state.isDeviceOnline
+                              ? 'IoT Live: ${state.deviceId}'
+                              : 'IoT Terhubung: ${state.deviceId}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: state.isDeviceOnline ? AppColors.success : AppColors.primaryDark,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        if (state.latestReading != null) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                            decoration: BoxDecoration(
+                              color: AppColors.infoLight,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              'SEQ #${state.latestReading!.sequence}',
+                              style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: AppColors.info),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                     TextButton.icon(
-                      onPressed: () => state.triggerSensorFluctuation(),
+                      onPressed: () async {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Row(
+                              children: [
+                                SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                ),
+                                SizedBox(width: 10),
+                                Text('Menghubungi Firebase...'),
+                              ],
+                            ),
+                            duration: Duration(seconds: 1),
+                          ),
+                        );
+
+                        final success = await state.refreshFirebaseIotData();
+                        if (!context.mounted) return;
+
+                        if (success) {
+                          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Data sensor terbaru berhasil ditarik dari Firebase! (${state.temperatureMetric.currentValue}°C, ${state.pressureMetric.currentValue} hPa)',
+                              ),
+                              backgroundColor: AppColors.success,
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        } else {
+                          final err = state.iotLastError ?? 'Periksa koneksi internet / Rules Firebase';
+                          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Firebase notice: $err'),
+                              backgroundColor: AppColors.warning,
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        }
+                      },
                       icon: const Icon(Icons.refresh, size: 14, color: AppColors.primaryDark),
                       label: const Text('Perbarui Data', style: TextStyle(fontSize: 11, color: AppColors.primaryDark)),
                       style: TextButton.styleFrom(
@@ -129,6 +199,30 @@ class OperatorDashboardTab extends StatelessWidget {
                     ),
                   ],
                 ),
+                if (!state.isUsingRealFirebase && state.iotLastError != null) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.warningLight.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.info_outline, size: 15, color: AppColors.warning),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'Status Koneksi: ${state.iotLastError}. Pastikan Rules di Firebase Console mengizinkan ".read": true.',
+                            style: const TextStyle(fontSize: 10.5, color: AppColors.textPrimary),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
