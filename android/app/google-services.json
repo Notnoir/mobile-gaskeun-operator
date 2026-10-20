@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "590762104700",
+    "firebase_url": "https://gaskeun-ef49f-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "gaskeun-ef49f",
+    "storage_bucket": "gaskeun-ef49f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:590762104700:android:d8fcac48a12ac77abc76f9",
+        "android_client_info": {
+          "package_name": "com.gaskeun.gaskeun"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "590762104700-id5drqnrikf84ir3ggv05htk6fcpj6pn.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.gaskeun.gaskeun",
+            "certificate_hash": "0a8d3e166aeffb24efaf729875ece05a5e74a6be"
+          }
+        },
+        {
+          "client_id": "590762104700-g44p1ggkdkuffntkpsu4lrcr1od9jvc3.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyARvpQLmKazi_WRoIJyotOtIAC53QzwlhQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "590762104700-g44p1ggkdkuffntkpsu4lrcr1od9jvc3.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
