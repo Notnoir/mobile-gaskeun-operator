@@ -54,7 +54,8 @@ void main() {
     expect(find.text('GasKeun Ops & RW'), findsWidgets);
     expect(find.text('Dashboard IoT'), findsOneWidget);
     expect(find.text('Setoran'), findsOneWidget);
-    expect(find.text('Mode RW'), findsOneWidget);
+    expect(find.text('Operator'), findsOneWidget);
+    expect(find.text('Mode RW'), findsNothing);
     expect(find.byTooltip('Keluar Akun'), findsOneWidget);
 
     state.dispose();
@@ -78,7 +79,8 @@ void main() {
     expect(find.text('GasKeun Ops & RW'), findsWidgets);
     expect(find.text('Dashboard RW'), findsOneWidget);
     expect(find.text('Laporan PDF'), findsOneWidget);
-    expect(find.text('Mode Operator'), findsOneWidget);
+    expect(find.text('Pengawas RW'), findsOneWidget);
+    expect(find.text('Mode Operator'), findsNothing);
     expect(find.byTooltip('Keluar Akun'), findsOneWidget);
 
     state.dispose();

@@ -18,144 +18,6 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
   @override
   Size get preferredSize => const Size.fromHeight(64);
 
-  void _showRoleSwitcherDialog(BuildContext context) {
-    final state = context.read<AppState>();
-
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Pilih Mode Petugas',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(ctx),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                const Text(
-                  'Beralih dengan cepat antara portal Operator Lapangan dan Pengawas RW.',
-                  style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
-                ),
-                const SizedBox(height: 16),
-                _buildRoleOption(
-                  context: ctx,
-                  state: state,
-                  role: UserRole.operator,
-                  title: 'Portal Operator',
-                  subtitle: 'Pak Anton — Monitoring sensor IoT & verifikasi setoran sampah',
-                  icon: Icons.precision_manufacturing_outlined,
-                  color: AppColors.info,
-                ),
-                const SizedBox(height: 10),
-                _buildRoleOption(
-                  context: ctx,
-                  state: state,
-                  role: UserRole.pengawas,
-                  title: 'Portal Pengawas RW',
-                  subtitle: 'Bu Sari Handayani — Statistik partisipasi KK & ekspor PDF RW',
-                  icon: Icons.assessment_outlined,
-                  color: Colors.deepPurple,
-                ),
-                const SizedBox(height: 10),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildRoleOption({
-    required BuildContext context,
-    required AppState state,
-    required UserRole role,
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required Color color,
-  }) {
-    final isSelected = state.currentRole == role;
-
-    return InkWell(
-      onTap: () {
-        state.setRole(role);
-        Navigator.pop(context);
-      },
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected ? color.withValues(alpha: 0.08) : Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: isSelected ? color : AppColors.cardBorder,
-            width: isSelected ? 1.8 : 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: color, size: 22),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: isSelected ? color : AppColors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (isSelected)
-              Icon(Icons.check_circle, color: color, size: 20)
-            else
-              const Icon(Icons.chevron_right, color: AppColors.textMuted, size: 20),
-          ],
-        ),
-      ),
-    );
-  }
-
   void _showLogoutDialog(BuildContext context, AppState state) {
     final profile = state.activeProfile;
 
@@ -321,20 +183,29 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
       titleSpacing: 16,
       title: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(7),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [AppColors.info, Colors.deepPurple],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.asset(
+              'assets/images/logo.png',
+              width: 32,
+              height: 32,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) => Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [AppColors.info, Colors.deepPurple],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.precision_manufacturing_rounded,
+                  color: Colors.white,
+                  size: 18,
+                ),
               ),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(
-              Icons.precision_manufacturing_rounded,
-              color: Colors.white,
-              size: 20,
             ),
           ),
           const SizedBox(width: 10),
@@ -382,24 +253,6 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
         ],
       ),
       actions: [
-        if (showRoleSwitcher)
-          TextButton.icon(
-            onPressed: () => _showRoleSwitcherDialog(context),
-            style: TextButton.styleFrom(
-              backgroundColor: roleColor.withValues(alpha: 0.08),
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-                side: BorderSide(color: roleColor.withValues(alpha: 0.2)),
-              ),
-            ),
-            icon: Icon(Icons.swap_horiz, size: 14, color: roleColor),
-            label: Text(
-              state.currentRole == UserRole.operator ? 'Mode RW' : 'Mode Operator',
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: roleColor),
-            ),
-          ),
-        const SizedBox(width: 4),
         IconButton(
           tooltip: 'Keluar Akun',
           icon: const Icon(Icons.logout_rounded, color: AppColors.danger, size: 20),
