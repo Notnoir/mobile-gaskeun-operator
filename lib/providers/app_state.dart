@@ -8,6 +8,7 @@ import '../models/iot_sensor_model.dart';
 import '../models/report_model.dart';
 import '../models/iot_device_reading.dart';
 import '../services/iot_sensor_service.dart';
+import '../services/staff_registry_service.dart';
 
 class DemoUserCredential {
   final String email;
@@ -741,7 +742,7 @@ class AppState extends ChangeNotifier {
   }
 
   // Authentication & Login/Logout
-  bool login(String email, String password) {
+  bool login(String email, String password, {UserRole? targetRole}) {
     final cleanEmail = email.trim().toLowerCase();
     final cleanPassword = password.trim();
 
@@ -755,7 +756,7 @@ class AppState extends ChangeNotifier {
 
     if (matched != null) {
       if (cleanPassword == matched.password || cleanPassword.length >= 6) {
-        _currentRole = matched.role;
+        _currentRole = targetRole ?? matched.role;
         _isLoggedIn = true;
         _isAuthenticated = true;
         notifyListeners();
@@ -763,34 +764,50 @@ class AppState extends ChangeNotifier {
       }
       return false;
     } else {
-      if (cleanEmail.contains('@') && cleanPassword.length >= 6) {
-        if (cleanEmail.contains('pengawas') || cleanEmail.contains('rw') || cleanEmail.contains('sari')) {
-          _currentRole = UserRole.pengawas;
-        } else {
-          _currentRole = UserRole.operator;
-        }
+      // Verifikasi apakah email terdaftar di Whitelist Petugas (Pendekatan 2)
+      final staffRole = StaffRegistryService().verifyStaffRoleSync(
+        cleanEmail,
+        preferredRole: targetRole,
+      );
+      if (staffRole != null && cleanPassword.length >= 6) {
+        _currentRole = staffRole;
         _isLoggedIn = true;
         _isAuthenticated = true;
         notifyListeners();
         return true;
       }
+      // Bukan petugas resmi -> Akses Ditolak
       return false;
     }
   }
 
-  // Login dengan Akun Google
-  void loginWithGoogleAccount({
+  // Login dengan Akun Google (dengan verifikasi Whitelist Petugas & dukungan Multi-Role)
+  Future<bool> loginWithGoogleAccount({
     required String email,
     required String displayName,
+    String? uid,
+    UserRole? targetRole,
     String? phone,
     String? rt,
     String? rw,
-  }) {
+  }) async {
     final cleanEmail = email.trim().toLowerCase();
 
-    if (cleanEmail.contains('pengawas') || cleanEmail.contains('rw') || cleanEmail.contains('sari')) {
+    // Verifikasi izin petugas dari Whitelist Registry (Firebase RTDB + Local Seed)
+    final staffRole = await StaffRegistryService().verifyStaffRole(
+      email: cleanEmail,
+      uid: uid,
+      preferredRole: targetRole,
+    );
+
+    if (staffRole == null) {
+      // Akses ditolak: bukan petugas resmi
+      return false;
+    }
+
+    if (staffRole == UserRole.pengawas) {
       _pengawasProfile = UserProfile(
-        id: _pengawasProfile.id,
+        id: uid ?? _pengawasProfile.id,
         name: displayName.isNotEmpty ? displayName : _pengawasProfile.name,
         email: email,
         phone: _pengawasProfile.phone,
@@ -801,7 +818,7 @@ class AppState extends ChangeNotifier {
       _currentRole = UserRole.pengawas;
     } else {
       _operatorProfile = UserProfile(
-        id: _operatorProfile.id,
+        id: uid ?? _operatorProfile.id,
         name: displayName.isNotEmpty ? displayName : _operatorProfile.name,
         email: email,
         phone: _operatorProfile.phone,
@@ -815,6 +832,7 @@ class AppState extends ChangeNotifier {
     _isLoggedIn = true;
     _isAuthenticated = true;
     notifyListeners();
+    return true;
   }
 
   void logout() {

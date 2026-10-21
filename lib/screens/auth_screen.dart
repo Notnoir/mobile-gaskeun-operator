@@ -4,6 +4,7 @@ import '../core/theme/app_colors.dart';
 import '../models/user_model.dart';
 import '../providers/app_state.dart';
 import '../services/auth_service.dart';
+import '../services/staff_registry_service.dart';
 
 class AuthScreen extends StatefulWidget {
   final VoidCallback? onLoginSuccess;
@@ -15,62 +16,8 @@ class AuthScreen extends StatefulWidget {
 }
 
 class _AuthScreenState extends State<AuthScreen> {
-  final _formKeyLogin = GlobalKey<FormState>();
-
-  final TextEditingController _emailController =
-      TextEditingController(text: 'operator@gaskeun.id');
-  final TextEditingController _passwordController =
-      TextEditingController(text: 'password123');
-
-  bool _obscurePassword = true;
   bool _isLoading = false;
   String? _errorMessage;
-
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    super.dispose();
-  }
-
-  void _selectDemoAccount(DemoUserCredential cred) {
-    setState(() {
-      _emailController.text = cred.email;
-      _passwordController.text = cred.password;
-      _errorMessage = null;
-    });
-  }
-
-  void _handleEmailLogin() {
-    setState(() => _errorMessage = null);
-
-    if (!_formKeyLogin.currentState!.validate()) return;
-
-    setState(() => _isLoading = true);
-
-    final email = _emailController.text.trim();
-    final password = _passwordController.text.trim();
-
-    Future.delayed(const Duration(milliseconds: 400), () {
-      if (!mounted) return;
-
-      final appState = context.read<AppState>();
-      final isSuccess = appState.login(email, password);
-
-      setState(() => _isLoading = false);
-
-      if (isSuccess) {
-        final profile = appState.activeProfile;
-        _showSuccessNotification('Selamat bertugas, ${profile.name}! (${profile.role.displayName})');
-        widget.onLoginSuccess?.call();
-      } else {
-        setState(() {
-          _errorMessage =
-              'Email atau password tidak sesuai. Pastikan akun petugas terdaftar dan password minimal 6 karakter.';
-        });
-      }
-    });
-  }
 
   Future<void> _handleGoogleAuth() async {
     setState(() {
@@ -88,16 +35,60 @@ class _AuthScreenState extends State<AuthScreen> {
 
       if (!mounted) return;
 
+      // 1. Dapatkan daftar seluruh role yang diizinkan untuk akun Google ini
+      final authorizedRoles = await StaffRegistryService().getAuthorizedRoles(
+        email: authResult.email,
+        uid: authResult.firebaseUser?.uid,
+      );
+
+      if (authorizedRoles.isEmpty) {
+        await AuthService().signOut();
+        if (!mounted) return;
+        setState(() {
+          _isLoading = false;
+          _errorMessage =
+              'Akses Ditolak: Akun (${authResult.email}) tidak terdaftar dalam daftar izin Petugas (Operator / Pengawas RW).\n\nSilakan gunakan aplikasi GasKeun Warga untuk akun warga, atau hubungi administrator RW.';
+        });
+        return;
+      }
+
+      // 2. Jika akun di-whitelist untuk KEDUA role, munculkan dialog pilihan portal masuk
+      UserRole targetRole;
+      if (authorizedRoles.length > 1) {
+        if (!mounted) return;
+        setState(() => _isLoading = false);
+
+        final chosenRole = await _showRolePickerDialog(
+          context,
+          authResult.email,
+          authorizedRoles,
+        );
+
+        if (chosenRole == null) {
+          // Pengguna membatalkan pemilihan portal
+          await AuthService().signOut();
+          return;
+        }
+        targetRole = chosenRole;
+        if (!mounted) return;
+        setState(() => _isLoading = true);
+      } else {
+        targetRole = authorizedRoles.first;
+      }
+
       final appState = context.read<AppState>();
-      appState.loginWithGoogleAccount(
+      await appState.loginWithGoogleAccount(
         email: authResult.email,
         displayName: authResult.displayName,
+        uid: authResult.firebaseUser?.uid,
+        targetRole: targetRole,
       );
 
       setState(() => _isLoading = false);
 
+      final roleName = appState.currentRole.displayName;
       _showSuccessNotification(
-        'Berhasil masuk sebagai petugas: ${authResult.displayName}',
+        'Berhasil masuk sebagai $roleName: ${authResult.displayName}',
       );
       widget.onLoginSuccess?.call();
     } catch (e) {
@@ -108,6 +99,159 @@ class _AuthScreenState extends State<AuthScreen> {
             'Tidak dapat menghubungkan Akun Google: $e\n(Pastikan SHA-1 terdaftar di Firebase Console).';
       });
     }
+  }
+
+  Future<UserRole?> _showRolePickerDialog(
+    BuildContext context,
+    String email,
+    Set<UserRole> roles,
+  ) {
+    return showModalBottomSheet<UserRole>(
+      context: context,
+      isDismissible: false,
+      enableDrag: false,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.info.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.manage_accounts_rounded, color: AppColors.info, size: 24),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Pilih Portal Petugas',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          Text(
+                            email,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                const Text(
+                  'Akun Anda terdaftar dengan izin untuk kedua portal. Silakan pilih portal yang ingin dibuka:',
+                  style: TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.4),
+                ),
+                const SizedBox(height: 16),
+                _buildRolePickerCard(
+                  context: ctx,
+                  role: UserRole.operator,
+                  title: 'Portal Operator Lapangan',
+                  subtitle: 'Monitoring telemetri sensor IoT & verifikasi setoran sampah',
+                  icon: Icons.precision_manufacturing_rounded,
+                  color: AppColors.info,
+                ),
+                const SizedBox(height: 10),
+                _buildRolePickerCard(
+                  context: ctx,
+                  role: UserRole.pengawas,
+                  title: 'Portal Pengawas RW',
+                  subtitle: 'Statistik partisipasi warga KK & ekspor laporan PDF',
+                  icon: Icons.assessment_rounded,
+                  color: Colors.deepPurple,
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(ctx, null),
+                    child: const Text('Batal Masuk', style: TextStyle(color: AppColors.textMuted)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildRolePickerCard({
+    required BuildContext context,
+    required UserRole role,
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color color,
+  }) {
+    return InkWell(
+      onTap: () => Navigator.pop(context, role),
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: color.withValues(alpha: 0.3), width: 1.2),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: color,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.arrow_forward_ios_rounded, color: color, size: 16),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showSuccessNotification(String message) {
@@ -134,9 +278,6 @@ class _AuthScreenState extends State<AuthScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final demoAccounts = AppState.demoCredentials;
-    final currentEmail = _emailController.text.trim().toLowerCase();
-
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -145,14 +286,14 @@ class _AuthScreenState extends State<AuthScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
 
               // Brand Header
               Row(
                 children: [
                   Container(
-                    width: 52,
-                    height: 52,
+                    width: 56,
+                    height: 56,
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       color: Colors.white,
@@ -161,7 +302,7 @@ class _AuthScreenState extends State<AuthScreen> {
                       boxShadow: [
                         BoxShadow(
                           color: AppColors.info.withValues(alpha: 0.15),
-                          blurRadius: 10,
+                          blurRadius: 12,
                           offset: const Offset(0, 4),
                         ),
                       ],
@@ -172,7 +313,7 @@ class _AuthScreenState extends State<AuthScreen> {
                         'assets/images/logo.png',
                         fit: BoxFit.contain,
                         errorBuilder: (context, error, stackTrace) =>
-                            const Icon(Icons.precision_manufacturing_rounded, color: AppColors.info, size: 26),
+                            const Icon(Icons.precision_manufacturing_rounded, color: AppColors.info, size: 28),
                       ),
                     ),
                   ),
@@ -189,7 +330,7 @@ class _AuthScreenState extends State<AuthScreen> {
                         ),
                       ),
                       Text(
-                        'Portal Operator & Pengawas RW 05',
+                        'Portal Petugas Operator & Pengawas RW',
                         style: TextStyle(
                           fontSize: 12.5,
                           fontWeight: FontWeight.w500,
@@ -200,106 +341,50 @@ class _AuthScreenState extends State<AuthScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 28),
+              const SizedBox(height: 32),
 
               const Text(
                 'Masuk Portal Petugas',
                 style: TextStyle(
-                  fontSize: 22,
+                  fontSize: 24,
                   fontWeight: FontWeight.bold,
                   color: AppColors.textPrimary,
                 ),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 8),
               const Text(
-                'Silakan masuk dengan kredensial Operator atau Pengawas RW untuk monitoring reaktor dan audit data.',
+                'Akses terbatas khusus untuk Petugas Operator Lapangan dan Pengawas RW yang telah terdaftar dalam sistem resmi.',
                 style: TextStyle(
-                  fontSize: 13,
+                  fontSize: 13.5,
                   color: AppColors.textSecondary,
-                  height: 1.4,
+                  height: 1.5,
                 ),
               ),
-              const SizedBox(height: 22),
-
-              // Tombol Google Sign In Petugas
-              OutlinedButton(
-                onPressed: _isLoading ? null : _handleGoogleAuth,
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size.fromHeight(50),
-                  side: const BorderSide(color: AppColors.cardBorder, width: 1.2),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  backgroundColor: Colors.white,
-                ),
-                child: _isLoading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.info),
-                      )
-                    : Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Image.network(
-                            'https://www.gstatic.com/images/branding/product/2x/googleg_48dp.png',
-                            height: 22,
-                            width: 22,
-                            errorBuilder: (context, error, stackTrace) =>
-                                const Icon(Icons.g_mobiledata, color: Colors.blue, size: 24),
-                          ),
-                          const SizedBox(width: 12),
-                          const Text(
-                            'Masuk dengan Akun Google Petugas',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                        ],
-                      ),
-              ),
-              const SizedBox(height: 20),
-
-              // Divider "atau masuk dengan email"
-              Row(
-                children: const [
-                  Expanded(child: Divider(color: AppColors.cardBorder)),
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 12),
-                    child: Text(
-                      'atau dengan email petugas',
-                      style: TextStyle(fontSize: 12, color: AppColors.textMuted),
-                    ),
-                  ),
-                  Expanded(child: Divider(color: AppColors.cardBorder)),
-                ],
-              ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 28),
 
               // Error banner if any
               if (_errorMessage != null)
                 Container(
-                  margin: const EdgeInsets.only(bottom: 16),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  margin: const EdgeInsets.only(bottom: 20),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   decoration: BoxDecoration(
-                    color: AppColors.dangerLight.withValues(alpha: 0.6),
-                    borderRadius: BorderRadius.circular(10),
+                    color: AppColors.dangerLight.withValues(alpha: 0.7),
+                    borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: AppColors.danger.withValues(alpha: 0.3)),
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.error_outline, color: AppColors.danger, size: 18),
-                      const SizedBox(width: 8),
+                      const Icon(Icons.error_outline, color: AppColors.danger, size: 20),
+                      const SizedBox(width: 10),
                       Expanded(
                         child: Text(
                           _errorMessage!,
                           style: const TextStyle(
                             color: AppColors.danger,
-                            fontSize: 12,
+                            fontSize: 12.5,
                             fontWeight: FontWeight.w500,
+                            height: 1.4,
                           ),
                         ),
                       ),
@@ -307,204 +392,149 @@ class _AuthScreenState extends State<AuthScreen> {
                   ),
                 ),
 
-              // Form Login Petugas
-              Form(
-                key: _formKeyLogin,
+              // Tombol Google Sign In Petugas
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: OutlinedButton(
+                  onPressed: _isLoading ? null : _handleGoogleAuth,
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: AppColors.cardBorder, width: 1.4),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    backgroundColor: Colors.white,
+                    elevation: 0,
+                  ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 22,
+                          width: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2.2, color: AppColors.info),
+                        )
+                      : Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Image.network(
+                              'https://www.gstatic.com/images/branding/product/2x/googleg_48dp.png',
+                              height: 22,
+                              width: 22,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  const Icon(Icons.g_mobiledata, color: Colors.blue, size: 24),
+                            ),
+                            const SizedBox(width: 12),
+                            const Text(
+                              'Masuk dengan Akun Google Petugas',
+                              style: TextStyle(
+                                fontSize: 14.5,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
+                ),
+              ),
+
+              const SizedBox(height: 32),
+
+              // Security & Whitelist Information Box
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.infoLight.withValues(alpha: 0.35),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppColors.info.withValues(alpha: 0.2)),
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Quick Account Selection
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: const [
+                        Icon(Icons.shield_outlined, color: AppColors.info, size: 22),
+                        SizedBox(width: 8),
                         Text(
-                          'Pilih Akun Petugas:',
+                          'Sistem Akses Terproteksi (Whitelist)',
                           style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.textPrimary,
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.info,
                           ),
-                        ),
-                        Text(
-                          'Ketuk untuk auto-fill',
-                          style: TextStyle(fontSize: 11, color: AppColors.textMuted),
                         ),
                       ],
                     ),
                     const SizedBox(height: 8),
-                    Row(
-                      children: demoAccounts.map((account) {
-                        final isSelected = currentEmail == account.email.toLowerCase();
-                        final isOperator = account.role == UserRole.operator;
-                        final color = isOperator ? AppColors.info : Colors.deepPurple;
-
-                        return Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 4),
-                            child: InkWell(
-                              onTap: () => _selectDemoAccount(account),
-                              borderRadius: BorderRadius.circular(12),
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 200),
-                                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-                                decoration: BoxDecoration(
-                                  color: isSelected
-                                      ? color.withValues(alpha: 0.1)
-                                      : AppColors.background,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: isSelected ? color : AppColors.cardBorder,
-                                    width: isSelected ? 1.8 : 1,
-                                  ),
-                                ),
-                                child: Column(
-                                  children: [
-                                    Icon(
-                                      isOperator
-                                          ? Icons.settings_remote_outlined
-                                          : Icons.bar_chart_outlined,
-                                      size: 22,
-                                      color: isSelected ? color : AppColors.textSecondary,
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      account.roleLabel,
-                                      style: TextStyle(
-                                        fontSize: 12.5,
-                                        fontWeight: FontWeight.bold,
-                                        color: isSelected ? color : AppColors.textPrimary,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      account.name,
-                                      style: const TextStyle(
-                                        fontSize: 10,
-                                        color: AppColors.textSecondary,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 18),
-
-                    // Email
-                    const Text('Email Petugas', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 6),
-                    TextFormField(
-                      controller: _emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      decoration: InputDecoration(
-                        hintText: 'operator@gaskeun.id',
-                        prefixIcon: const Icon(Icons.badge_outlined, color: AppColors.info, size: 20),
-                        filled: true,
-                        fillColor: AppColors.background,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    const Text(
+                      'Hanya akun Google yang terdaftar dalam daftar izin resmi petugas (Operator Biodigester atau Pengawas RW) yang dapat mengakses aplikasi ini. Akun warga biasa wajib menggunakan aplikasi GasKeun Warga.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                        height: 1.45,
                       ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) return 'Email wajib diisi';
-                        if (!value.contains('@')) return 'Format email tidak valid';
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 14),
-
-                    // Password
-                    const Text('Kata Sandi (Password)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 6),
-                    TextFormField(
-                      controller: _passwordController,
-                      obscureText: _obscurePassword,
-                      decoration: InputDecoration(
-                        hintText: 'Minimal 6 karakter',
-                        prefixIcon: const Icon(Icons.lock_outline, color: AppColors.info, size: 20),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                            color: AppColors.textMuted,
-                            size: 20,
-                          ),
-                          onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                        ),
-                        filled: true,
-                        fillColor: AppColors.background,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) return 'Password wajib diisi';
-                        if (value.trim().length < 6) return 'Password minimal 6 karakter';
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 22),
-
-                    // Submit Login Button
-                    ElevatedButton(
-                      onPressed: _isLoading ? null : _handleEmailLogin,
-                      style: ElevatedButton.styleFrom(
-                        minimumSize: const Size.fromHeight(50),
-                        backgroundColor: AppColors.info,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      child: _isLoading
-                          ? const SizedBox(
-                              height: 22,
-                              width: 22,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                            )
-                          : const Text(
-                              'Masuk ke Portal Petugas',
-                              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
-                            ),
                     ),
                   ],
                 ),
               ),
 
-              const SizedBox(height: 28),
+              const SizedBox(height: 16),
 
-              // Highlights
+              // Feature Preview Cards
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: AppColors.infoLight.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.info.withValues(alpha: 0.2)),
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppColors.cardBorder),
                 ),
-                child: Row(
+                child: Column(
                   children: [
-                    const Icon(Icons.admin_panel_settings_outlined, color: AppColors.info, size: 26),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          Text(
-                            'Aplikasi Khusus Petugas (Operator & RW)',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.info,
-                            ),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.info.withValues(alpha: 0.12),
+                            shape: BoxShape.circle,
                           ),
-                          SizedBox(height: 2),
-                          Text(
-                            'Gunakan aplikasi ini untuk verifikasi setoran limbah organik warga, monitoring sensor IoT MQ-4/136, dan cetak laporan PDF RW.',
-                            style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                          child: const Icon(Icons.precision_manufacturing_rounded, color: AppColors.info, size: 18),
+                        ),
+                        const SizedBox(width: 10),
+                        const Expanded(
+                          child: Text(
+                            'Portal Operator: Monitoring Sensor IoT & Validasi Setoran',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      child: Divider(height: 1),
+                    ),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.deepPurple.withValues(alpha: 0.12),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.assessment_rounded, color: Colors.deepPurple, size: 18),
+                        ),
+                        const SizedBox(width: 10),
+                        const Expanded(
+                          child: Text(
+                            'Portal Pengawas RW: Statistik Partisipasi & Ekspor Laporan PDF',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
+
+              const SizedBox(height: 24),
             ],
           ),
         ),

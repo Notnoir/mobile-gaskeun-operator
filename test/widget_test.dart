@@ -5,13 +5,14 @@ import 'package:gaskeun_operator_rw/main.dart';
 import 'package:gaskeun_operator_rw/providers/app_state.dart';
 import 'package:gaskeun_operator_rw/models/user_model.dart';
 import 'package:gaskeun_operator_rw/models/waste_submission_model.dart';
+import 'package:gaskeun_operator_rw/services/staff_registry_service.dart';
 
 void main() {
   setUpAll(() {
     GoogleFonts.config.allowRuntimeFetching = false;
   });
 
-  testWidgets('GasKeunOperatorRwApp renders AuthScreen with Operator and Pengawas options',
+  testWidgets('GasKeunOperatorRwApp renders AuthScreen with Google Sign-In and whitelist info',
       (WidgetTester tester) async {
     final state = AppState();
     await tester.pumpWidget(
@@ -25,13 +26,14 @@ void main() {
     // Verify AuthScreen elements
     expect(find.text('GasKeun Ops & RW'), findsOneWidget);
     expect(find.text('Masuk Portal Petugas'), findsOneWidget);
-    expect(find.text('Pilih Akun Petugas:'), findsOneWidget);
-    expect(find.text('Operator'), findsOneWidget);
-    expect(find.text('Pengawas RW'), findsOneWidget);
     expect(find.text('Masuk dengan Akun Google Petugas'), findsOneWidget);
-    expect(find.text('Email Petugas'), findsOneWidget);
-    expect(find.text('Kata Sandi (Password)'), findsOneWidget);
-    expect(find.text('Masuk ke Portal Petugas'), findsOneWidget);
+    expect(find.text('Sistem Akses Terproteksi (Whitelist)'), findsOneWidget);
+
+    // Verify manual email & password login form is removed
+    expect(find.text('Pilih Akun Petugas:'), findsNothing);
+    expect(find.text('Email Petugas'), findsNothing);
+    expect(find.text('Kata Sandi (Password)'), findsNothing);
+    expect(find.text('Masuk ke Portal Petugas'), findsNothing);
 
     state.dispose();
   });
@@ -104,7 +106,34 @@ void main() {
 
     expect(find.text('GasKeun Ops & RW'), findsOneWidget);
     expect(find.text('Masuk Portal Petugas'), findsOneWidget);
-    expect(find.text('Pilih Akun Petugas:'), findsOneWidget);
+    expect(find.text('Masuk dengan Akun Google Petugas'), findsOneWidget);
+
+    state.dispose();
+  });
+
+  test('Unauthorized citizen account is rejected from staff portal (Approach 2)', () {
+    final state = AppState();
+    final isAllowed = state.login('warga.biasa@gmail.com', 'password123');
+    expect(isAllowed, isFalse);
+    expect(state.isLoggedIn, isFalse);
+    state.dispose();
+  });
+
+  test('Account whitelisted in both roles can log in as either Operator or Pengawas', () {
+    final staff = StaffRegistryService();
+    staff.registerStaffEmail('multirole@gaskeun.id', UserRole.operator);
+    staff.registerStaffEmail('multirole@gaskeun.id', UserRole.pengawas);
+
+    final state = AppState();
+    // Test login as Operator
+    final opSuccess = state.login('multirole@gaskeun.id', 'password123', targetRole: UserRole.operator);
+    expect(opSuccess, isTrue);
+    expect(state.currentRole, UserRole.operator);
+
+    // Test login as Pengawas
+    final rwSuccess = state.login('multirole@gaskeun.id', 'password123', targetRole: UserRole.pengawas);
+    expect(rwSuccess, isTrue);
+    expect(state.currentRole, UserRole.pengawas);
 
     state.dispose();
   });
