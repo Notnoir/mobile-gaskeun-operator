@@ -4,6 +4,7 @@ import '../core/theme/app_colors.dart';
 import '../models/user_model.dart';
 import '../providers/app_state.dart';
 import '../services/auth_service.dart';
+import '../services/notification_service.dart';
 
 class AppHeader extends StatelessWidget implements PreferredSizeWidget {
   final String? customTitle;
@@ -161,6 +162,26 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
           ),
         ),
         actions: [
+          TextButton.icon(
+            icon: const Icon(Icons.notifications_active_outlined, size: 16),
+            onPressed: () {
+              Navigator.pop(ctx);
+              if (state.currentRole == UserRole.operator) {
+                NotificationService().showNotificationBanner(
+                  title: '⚠️ Peringatan Tekanan Sensor (FCM Test)',
+                  body: 'Tekanan reaktor gaskeun-rw01-01 mencapai 8.8 kPa! Segera periksa katup gas.',
+                  isCritical: true,
+                );
+              } else {
+                NotificationService().showNotificationBanner(
+                  title: '📊 Laporan Siap (FCM Test)',
+                  body: 'Rekapitulasi partisipasi warga RW 05 bulan ini telah siap diekspor ke format PDF.',
+                  isCritical: false,
+                );
+              }
+            },
+            label: const Text('Simulasi Push FCM', style: TextStyle(fontSize: 12)),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: const Text('Tutup', style: TextStyle(color: AppColors.info)),

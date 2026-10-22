@@ -9,6 +9,7 @@ import '../models/report_model.dart';
 import '../models/iot_device_reading.dart';
 import '../services/iot_sensor_service.dart';
 import '../services/staff_registry_service.dart';
+import '../services/notification_service.dart';
 
 class DemoUserCredential {
   final String email;
@@ -832,10 +833,23 @@ class AppState extends ChangeNotifier {
     _isLoggedIn = true;
     _isAuthenticated = true;
     notifyListeners();
+
+    // Sinkronkan FCM token untuk push notification
+    try {
+      NotificationService().syncStaffToken(
+        email: email,
+        role: _currentRole,
+        uid: uid,
+      );
+    } catch (_) {}
+
     return true;
   }
 
   void logout() {
+    try {
+      NotificationService().unsubscribeAllTopics();
+    } catch (_) {}
     _isLoggedIn = false;
     _isAuthenticated = false;
     notifyListeners();
@@ -844,6 +858,9 @@ class AppState extends ChangeNotifier {
   // Role switching between Operator and Pengawas
   void setRole(UserRole role) {
     _currentRole = role;
+    try {
+      NotificationService().subscribeRoleTopics(role);
+    } catch (_) {}
     notifyListeners();
   }
 

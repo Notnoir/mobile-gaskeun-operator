@@ -1,17 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'core/theme/app_theme.dart';
 import 'models/user_model.dart';
 import 'providers/app_state.dart';
 import 'screens/auth_screen.dart';
 import 'screens/operator/operator_main_screen.dart';
 import 'screens/pengawas/pengawas_main_screen.dart';
+import 'services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
     await Firebase.initializeApp();
+    // Daftarkan background handler FCM
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+    // Inisialisasi perizinan dan pendengar FCM
+    await NotificationService().initialize();
   } catch (e) {
     debugPrint('Firebase initialization notice: $e');
   }
@@ -30,6 +36,7 @@ class GasKeunOperatorRwApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      scaffoldMessengerKey: NotificationService.messengerKey,
       title: 'GasKeun — Portal Operator & RW',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
