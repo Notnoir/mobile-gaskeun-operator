@@ -65,7 +65,6 @@ class _AuthScreenState extends State<AuthScreen> {
         );
 
         if (chosenRole == null) {
-          // Pengguna membatalkan pemilihan portal
           await AuthService().signOut();
           return;
         }
@@ -259,7 +258,7 @@ class _AuthScreenState extends State<AuthScreen> {
       SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.check_circle, color: Colors.white, size: 20),
+            const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
@@ -269,7 +268,7 @@ class _AuthScreenState extends State<AuthScreen> {
             ),
           ],
         ),
-        backgroundColor: AppColors.info,
+        backgroundColor: const Color(0xFF0F766E),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
@@ -278,267 +277,364 @@ class _AuthScreenState extends State<AuthScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).padding.bottom;
+
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 16),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final topHeight = constraints.maxHeight * 0.52;
+          const overlap = 28.0;
 
-              // Brand Header
-              Row(
-                children: [
-                  Container(
-                    width: 56,
-                    height: 56,
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppColors.cardBorder, width: 1.2),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.info.withValues(alpha: 0.15),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
+          return Stack(
+            children: [
+              // 1. Top Illustration (bg-login-reg.png)
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                height: topHeight,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Image.asset(
+                      'assets/images/bg-login-reg.png',
+                      fit: BoxFit.cover,
+                      alignment: Alignment.topCenter,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          color: const Color(0xFF0F3E36),
+                          child: const Center(
+                            child: Icon(Icons.precision_manufacturing_rounded, size: 64, color: Colors.white54),
+                          ),
+                        );
+                      },
+                    ),
+                    // Gradient overlay at bottom edge to smooth intersection with sheet
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      height: 50,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.bottomCenter,
+                            end: Alignment.topCenter,
+                            colors: [
+                              Colors.black.withValues(alpha: 0.15),
+                              Colors.transparent,
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // 2. Scrollable Content Layer (Card extends all the way down)
+              Positioned.fill(
+                child: SingleChildScrollView(
+                  physics: const ClampingScrollPhysics(),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                    child: Column(
+                      children: [
+                        // Space revealing top illustration
+                        SizedBox(height: topHeight - overlap),
+
+                        // Bottom Sheet Card: Fills all the way to the bottom
+                        Container(
+                          width: double.infinity,
+                          constraints: BoxConstraints(
+                            minHeight: constraints.maxHeight - (topHeight - overlap),
+                          ),
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.vertical(
+                              top: Radius.circular(36),
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Color(0x1F065F46),
+                                blurRadius: 35,
+                                offset: Offset(0, -12),
+                              ),
+                            ],
+                          ),
+                          padding: EdgeInsets.fromLTRB(24, 10, 24, 16 + bottomInset),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  // iOS Grabber Indicator
+                                  Center(
+                                    child: Container(
+                                      width: 38,
+                                      height: 4,
+                                      margin: const EdgeInsets.only(bottom: 12),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFE2E8F0),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                    ),
+                                  ),
+
+                                  // Header Title & Subtitle
+                                  const Text(
+                                    'Selamat Datang',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.w900,
+                                      color: Color(0xFF0F172A),
+                                      letterSpacing: -0.4,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  const Text(
+                                    'Masuk Portal Petugas',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 12.5,
+                                      color: Color(0xFF64748B),
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+
+                                  // Error Banner
+                                  if (_errorMessage != null)
+                                    Container(
+                                      margin: const EdgeInsets.only(bottom: 14),
+                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFFEF2F2),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(color: const Color(0xFFFCA5A5)),
+                                      ),
+                                      child: Row(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          const Icon(Icons.error_outline_rounded, color: Color(0xFFDC2626), size: 18),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: Text(
+                                              _errorMessage!,
+                                              style: const TextStyle(
+                                                color: Color(0xFFDC2626),
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+
+                                  // Google Sign-In Button
+                                  _buildGoogleButton(),
+                                  const SizedBox(height: 14),
+
+                                  // Whitelist Security Card
+                                  Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.infoLight.withValues(alpha: 0.35),
+                                      borderRadius: BorderRadius.circular(14),
+                                      border: Border.all(color: AppColors.info.withValues(alpha: 0.2)),
+                                    ),
+                                    child: Row(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const Icon(Icons.shield_outlined, color: AppColors.info, size: 20),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: const [
+                                              Text(
+                                                'Sistem Akses Terproteksi (Whitelist)',
+                                                style: TextStyle(
+                                                  fontSize: 12.5,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: AppColors.info,
+                                                ),
+                                              ),
+                                              SizedBox(height: 3),
+                                              Text(
+                                                'Khusus Petugas Operator Lapangan & Pengawas RW yang telah terdaftar resmi.',
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  color: AppColors.textSecondary,
+                                                  height: 1.35,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+
+                                  // Portal Features Overview
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF8FAFC),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          child: Row(
+                                            children: const [
+                                              Icon(Icons.precision_manufacturing_rounded, size: 16, color: AppColors.info),
+                                              SizedBox(width: 6),
+                                              Expanded(
+                                                child: Text(
+                                                  'Operator IoT',
+                                                  style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFF1E293B)),
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        Container(width: 1, height: 16, color: const Color(0xFFE2E8F0)),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Row(
+                                            children: const [
+                                              Icon(Icons.assessment_rounded, size: 16, color: Colors.deepPurple),
+                                              SizedBox(width: 6),
+                                              Expanded(
+                                                child: Text(
+                                                  'Pengawas RW',
+                                                  style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFF1E293B)),
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              // Subfooter pinned at bottom of card
+                              Padding(
+                                padding: const EdgeInsets.only(top: 14),
+                                child: Column(
+                                  children: const [
+                                    Text(
+                                      'GasKeun Ops & RW',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: 1.0,
+                                        color: Color(0xFF065F46),
+                                      ),
+                                    ),
+                                    SizedBox(height: 2),
+                                    Text(
+                                      'Komunitas • Lingkungan • Masa Depan',
+                                      style: TextStyle(
+                                        fontSize: 10.5,
+                                        color: Color(0xFF94A3B8),
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: Image.asset(
-                        'assets/images/logo.png',
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) =>
-                            const Icon(Icons.precision_manufacturing_rounded, color: AppColors.info, size: 28),
-                      ),
-                    ),
                   ),
-                  const SizedBox(width: 14),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'GasKeun Ops & RW',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                      Text(
-                        'Portal Petugas Operator & Pengawas RW',
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.deepPurple.withValues(alpha: 0.8),
-                        ),
-                      ),
-                    ],
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  // ==================== GOOGLE BUTTON ====================
+  Widget _buildGoogleButton() {
+    return SizedBox(
+      width: double.infinity,
+      height: 48,
+      child: OutlinedButton(
+        onPressed: _isLoading ? null : _handleGoogleAuth,
+        style: OutlinedButton.styleFrom(
+          side: const BorderSide(color: Color(0xFFE2E8F0), width: 1.2),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          backgroundColor: Colors.white,
+          elevation: 0,
+        ),
+        child: _isLoading
+            ? const SizedBox(
+                height: 18,
+                width: 18,
+                child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.info),
+              )
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _buildGoogleIcon(),
+                  const SizedBox(width: 10),
+                  const Text(
+                    'Masuk dengan Akun Google Petugas',
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF1E293B),
+                      letterSpacing: -0.2,
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 32),
-
-              const Text(
-                'Masuk Portal Petugas',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Akses terbatas khusus untuk Petugas Operator Lapangan dan Pengawas RW yang telah terdaftar dalam sistem resmi.',
-                style: TextStyle(
-                  fontSize: 13.5,
-                  color: AppColors.textSecondary,
-                  height: 1.5,
-                ),
-              ),
-              const SizedBox(height: 28),
-
-              // Error banner if any
-              if (_errorMessage != null)
-                Container(
-                  margin: const EdgeInsets.only(bottom: 20),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: AppColors.dangerLight.withValues(alpha: 0.7),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.danger.withValues(alpha: 0.3)),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(Icons.error_outline, color: AppColors.danger, size: 20),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          _errorMessage!,
-                          style: const TextStyle(
-                            color: AppColors.danger,
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w500,
-                            height: 1.4,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-              // Tombol Google Sign In Petugas
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: OutlinedButton(
-                  onPressed: _isLoading ? null : _handleGoogleAuth,
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: AppColors.cardBorder, width: 1.4),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    backgroundColor: Colors.white,
-                    elevation: 0,
-                  ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 22,
-                          width: 22,
-                          child: CircularProgressIndicator(strokeWidth: 2.2, color: AppColors.info),
-                        )
-                      : Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Image.network(
-                              'https://www.gstatic.com/images/branding/product/2x/googleg_48dp.png',
-                              height: 22,
-                              width: 22,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  const Icon(Icons.g_mobiledata, color: Colors.blue, size: 24),
-                            ),
-                            const SizedBox(width: 12),
-                            const Text(
-                              'Masuk dengan Akun Google Petugas',
-                              style: TextStyle(
-                                fontSize: 14.5,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.textPrimary,
-                              ),
-                            ),
-                          ],
-                        ),
-                ),
-              ),
-
-              const SizedBox(height: 32),
-
-              // Security & Whitelist Information Box
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.infoLight.withValues(alpha: 0.35),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.info.withValues(alpha: 0.2)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: const [
-                        Icon(Icons.shield_outlined, color: AppColors.info, size: 22),
-                        SizedBox(width: 8),
-                        Text(
-                          'Sistem Akses Terproteksi (Whitelist)',
-                          style: TextStyle(
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.info,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Hanya akun Google yang terdaftar dalam daftar izin resmi petugas (Operator Biodigester atau Pengawas RW) yang dapat mengakses aplikasi ini. Akun warga biasa wajib menggunakan aplikasi GasKeun Warga.',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textSecondary,
-                        height: 1.45,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // Feature Preview Cards
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade50,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.cardBorder),
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: AppColors.info.withValues(alpha: 0.12),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.precision_manufacturing_rounded, color: AppColors.info, size: 18),
-                        ),
-                        const SizedBox(width: 10),
-                        const Expanded(
-                          child: Text(
-                            'Portal Operator: Monitoring Sensor IoT & Validasi Setoran',
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8),
-                      child: Divider(height: 1),
-                    ),
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.deepPurple.withValues(alpha: 0.12),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.assessment_rounded, color: Colors.deepPurple, size: 18),
-                        ),
-                        const SizedBox(width: 10),
-                        const Expanded(
-                          child: Text(
-                            'Portal Pengawas RW: Statistik Partisipasi & Ekspor Laporan PDF',
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 24),
-            ],
-          ),
-        ),
       ),
+    );
+  }
+
+  Widget _buildGoogleIcon() {
+    return Image.network(
+      'https://www.gstatic.com/images/branding/product/2x/googleg_48dp.png',
+      height: 20,
+      width: 20,
+      errorBuilder: (context, error, stackTrace) {
+        return Container(
+          width: 20,
+          height: 20,
+          alignment: Alignment.center,
+          decoration: const BoxDecoration(
+            shape: BoxShape.circle,
+            color: Color(0xFF4285F4),
+          ),
+          child: const Text(
+            'G',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+              color: Colors.white,
+            ),
+          ),
+        );
+      },
     );
   }
 }

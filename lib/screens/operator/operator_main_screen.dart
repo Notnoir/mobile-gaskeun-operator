@@ -35,10 +35,11 @@ class _OperatorMainScreenState extends State<OperatorMainScreen> {
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
+          color: Colors.white,
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.06),
-              blurRadius: 10,
+              blurRadius: 12,
               offset: const Offset(0, -2),
             ),
           ],
@@ -46,10 +47,12 @@ class _OperatorMainScreenState extends State<OperatorMainScreen> {
         child: BottomNavigationBar(
           currentIndex: _currentIndex,
           onTap: (index) => setState(() => _currentIndex = index),
-          selectedItemColor: AppColors.info,
-          unselectedItemColor: AppColors.textMuted,
+          backgroundColor: Colors.white,
+          type: BottomNavigationBarType.fixed,
+          selectedItemColor: AppColors.primary, // Hijau tema biodigester
+          unselectedItemColor: const Color(0xFF6B7280),
           selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
-          unselectedLabelStyle: const TextStyle(fontSize: 11),
+          unselectedLabelStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
           items: [
             const BottomNavigationBarItem(
               icon: Icon(Icons.dashboard_outlined),
@@ -58,22 +61,23 @@ class _OperatorMainScreenState extends State<OperatorMainScreen> {
             ),
             BottomNavigationBarItem(
               icon: Stack(
+                clipBehavior: Clip.none,
                 children: [
                   const Icon(Icons.inventory_2_outlined),
                   if (state.pendingSubmissionsCount > 0)
                     Positioned(
-                      top: 0,
-                      right: 0,
+                      top: -2,
+                      right: -4,
                       child: Container(
-                        padding: const EdgeInsets.all(3),
-                        decoration: const BoxDecoration(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                        decoration: BoxDecoration(
                           color: AppColors.warning,
-                          shape: BoxShape.circle,
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                        constraints: const BoxConstraints(minWidth: 14, minHeight: 14),
+                        constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
                         child: Text(
                           '${state.pendingSubmissionsCount}',
-                          style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
+                          style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
                           textAlign: TextAlign.center,
                         ),
                       ),
@@ -85,22 +89,23 @@ class _OperatorMainScreenState extends State<OperatorMainScreen> {
             ),
             BottomNavigationBarItem(
               icon: Stack(
+                clipBehavior: Clip.none,
                 children: [
                   const Icon(Icons.water_drop_outlined),
                   if (state.pendingClaimsCount > 0)
                     Positioned(
-                      top: 0,
-                      right: 0,
+                      top: -2,
+                      right: -4,
                       child: Container(
-                        padding: const EdgeInsets.all(3),
-                        decoration: const BoxDecoration(
-                          color: AppColors.info,
-                          shape: BoxShape.circle,
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary,
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                        constraints: const BoxConstraints(minWidth: 14, minHeight: 14),
+                        constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
                         child: Text(
                           '${state.pendingClaimsCount}',
-                          style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
+                          style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
                           textAlign: TextAlign.center,
                         ),
                       ),

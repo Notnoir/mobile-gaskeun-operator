@@ -229,7 +229,7 @@ class OperatorDashboardTab extends StatelessWidget {
 
           // AI Predictive Alert Banner (if any)
           if (alerts.isNotEmpty) ...[
-            ...alerts.map((alert) => _buildAlertBanner(context, alert, state)),
+            ...alerts.map((alert) => _buildAlertBanner(context, alert)),
             const SizedBox(height: 16),
           ],
 
@@ -346,7 +346,7 @@ class OperatorDashboardTab extends StatelessWidget {
     );
   }
 
-  Widget _buildAlertBanner(BuildContext context, PredictiveAlert alert, AppState state) {
+  Widget _buildAlertBanner(BuildContext context, PredictiveAlert alert) {
     Color bg = AppColors.warningLight;
     Color border = AppColors.warning;
     Color textCol = const Color(0xFF92400E);
@@ -382,21 +382,6 @@ class OperatorDashboardTab extends StatelessWidget {
           Text(
             alert.message,
             style: TextStyle(fontSize: 12, color: textCol.withOpacity(0.9), height: 1.3),
-          ),
-          const SizedBox(height: 10),
-          Align(
-            alignment: Alignment.centerRight,
-            child: ElevatedButton(
-              onPressed: () => state.dismissAlert(alert.id),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: border,
-                foregroundColor: Colors.white,
-                minimumSize: const Size(120, 32),
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-              child: const Text('Tandai Selesai', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-            ),
           ),
         ],
       ),

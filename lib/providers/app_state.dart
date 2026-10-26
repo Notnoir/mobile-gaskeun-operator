@@ -345,7 +345,7 @@ class AppState extends ChangeNotifier {
         id: 'alt-01',
         title: 'Prediksi Tekanan Gas Penuh',
         message:
-            'Laju akumulasi gas meningkat +18%. Tekanan diprediksi mencapai batas kapasitas 10.0 kPa dalam 8 jam ke depan. Disarankan alirkan ke jaringan kompor warga.',
+            'Penampung diperkirakan penuh dalam sekitar 2 jam. Tekanan sekarang 0,42 kPa dan diperkirakan naik menjadi 0,57 kPa dalam 3 jam.',
         severity: SensorSeverity.warning,
         timestamp: now.subtract(const Duration(minutes: 25)),
       ),
@@ -875,6 +875,64 @@ class AppState extends ChangeNotifier {
     machineName = name;
     machineLocation = location;
     notifyListeners();
+  }
+
+  // Warga Actions: Submit Waste
+  WasteSubmission submitWaste({
+    required double weightKg,
+    required String category,
+  }) {
+    final randomCode = 'GSK-';
+    final points = (weightKg * 100).round();
+
+    final submission = WasteSubmission(
+      id: 'sub-',
+      ticketCode: randomCode,
+      citizenId: _wargaProfile.id,
+      citizenName: _wargaProfile.name,
+      citizenPhone: _wargaProfile.phone,
+      citizenRt: _wargaProfile.rt,
+      weightKg: weightKg,
+      points: points,
+      wasteCategory: category,
+      createdAt: DateTime.now(),
+      status: SubmissionStatus.menunggu,
+    );
+
+    _submissions.insert(0, submission);
+    notifyListeners();
+    return submission;
+  }
+
+  // Warga Actions: Redeem Points
+  bool claimReward(RewardItem item, int quantity) {
+    final totalCost = item.pointsCost * quantity;
+    if (_wargaProfile.points < totalCost || item.stock < quantity) {
+      return false;
+    }
+
+    _wargaProfile.points -= totalCost;
+    item.stock -= quantity;
+    _wargaProfile.monthlyClaimsCount += quantity;
+
+    final voucherCode = 'VCR-';
+    final claim = RewardClaim(
+      id: 'clm-',
+      voucherCode: voucherCode,
+      citizenId: _wargaProfile.id,
+      citizenName: _wargaProfile.name,
+      citizenPhone: _wargaProfile.phone,
+      rewardId: item.id,
+      rewardName: item.name,
+      pointsCost: totalCost,
+      quantity: quantity,
+      requestedAt: DateTime.now(),
+      status: ClaimStatus.menunggu,
+    );
+
+    _claims.insert(0, claim);
+    notifyListeners();
+    return true;
   }
 
   // Operator Actions: Verify Waste Submission
