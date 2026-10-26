@@ -109,11 +109,11 @@ class AppState extends ChangeNotifier {
 
   SensorMetric _pressureMetric = SensorMetric(
     name: 'Tekanan Biogas',
-    currentValue: 1045.0,
-    unit: 'hPa',
-    maxValue: 1200.0,
-    severity: SensorSeverity.warning,
-    history7Points: [980.0, 995.0, 1010.0, 1025.0, 1032.0, 1038.0, 1045.0],
+    currentValue: 3.5,
+    unit: 'kPa',
+    maxValue: 10.0,
+    severity: SensorSeverity.normal,
+    history7Points: [2.8, 3.0, 3.1, 3.2, 3.4, 3.4, 3.5],
     sensorType: SensorType.pressure,
   );
 
@@ -345,7 +345,7 @@ class AppState extends ChangeNotifier {
         id: 'alt-01',
         title: 'Prediksi Tekanan Gas Penuh',
         message:
-            'Laju akumulasi gas meningkat +18%. Tekanan diprediksi mencapai batas kapasitas 1.150 hPa dalam 8 jam ke depan. Disarankan alirkan ke jaringan kompor warga.',
+            'Laju akumulasi gas meningkat +18%. Tekanan diprediksi mencapai batas kapasitas 10.0 kPa dalam 8 jam ke depan. Disarankan alirkan ke jaringan kompor warga.',
         severity: SensorSeverity.warning,
         timestamp: now.subtract(const Duration(minutes: 25)),
       ),
@@ -402,24 +402,24 @@ class AppState extends ChangeNotifier {
       sensorType: SensorType.temperature,
     );
 
-    final pressureDelta = (random.nextDouble() - 0.45) * 8.0;
-    final newPressure =
-        double.parse((_pressureMetric.currentValue + pressureDelta).toStringAsFixed(0));
+    final pressureDelta = (random.nextDouble() - 0.48) * 0.2;
+    final newPressure = double.parse(
+        (_pressureMetric.currentValue + pressureDelta).clamp(0.5, 12.0).toStringAsFixed(2));
     final updatedPressureHistory = List<double>.from(_pressureMetric.history7Points.sublist(1))
       ..add(newPressure);
 
     SensorSeverity pressureSeverity = SensorSeverity.normal;
-    if (newPressure > 1100) {
+    if (newPressure >= 10.0) {
       pressureSeverity = SensorSeverity.critical;
-    } else if (newPressure > 1030) {
+    } else if (newPressure >= 7.5) {
       pressureSeverity = SensorSeverity.warning;
     }
 
     _pressureMetric = SensorMetric(
       name: 'Tekanan Biogas',
       currentValue: newPressure,
-      unit: 'hPa',
-      maxValue: 1200.0,
+      unit: 'kPa',
+      maxValue: 10.0,
       severity: pressureSeverity,
       history7Points: updatedPressureHistory,
       sensorType: SensorType.pressure,
@@ -543,7 +543,7 @@ class AppState extends ChangeNotifier {
   void _applyHistoryToMetrics(List<IotDeviceReading> history) {
     if (history.length < 2) return;
     final tempPoints = history.map((e) => e.temperatureC).toList();
-    final pressPoints = history.map((e) => double.parse((e.pressureKpa * 10.0).toStringAsFixed(1))).toList();
+    final pressPoints = history.map((e) => double.parse((e.pressureKpa + 2.0).clamp(0.0, 20.0).toStringAsFixed(2))).toList();
     final mq4HolderPoints = history.map((e) => e.mq4HolderRaw.toDouble()).toList();
     final mq4BioPoints = history.map((e) => e.mq4BiodigesterRaw.toDouble()).toList();
     final mq136Points = history.map((e) => e.mq136FilterAmbientRaw.toDouble()).toList();
@@ -557,12 +557,19 @@ class AppState extends ChangeNotifier {
       history7Points: tempPoints,
       sensorType: SensorType.temperature,
     );
+    SensorSeverity pressHistorySeverity = SensorSeverity.normal;
+    if (pressPoints.last >= 10.0) {
+      pressHistorySeverity = SensorSeverity.critical;
+    } else if (pressPoints.last >= 7.5) {
+      pressHistorySeverity = SensorSeverity.warning;
+    }
+
     _pressureMetric = SensorMetric(
       name: _pressureMetric.name,
       currentValue: pressPoints.last,
-      unit: _pressureMetric.unit,
-      maxValue: _pressureMetric.maxValue,
-      severity: _pressureMetric.severity,
+      unit: 'kPa',
+      maxValue: 10.0,
+      severity: pressHistorySeverity,
       history7Points: pressPoints,
       sensorType: SensorType.pressure,
     );
@@ -618,28 +625,28 @@ class AppState extends ChangeNotifier {
       sensorType: SensorType.temperature,
     );
 
-    // 2. Tekanan Biogas (kpa -> hpa: 101.3 kpa = 1013 hpa)
-    final pressureHpa = double.parse((r.pressureKpa * 10.0).toStringAsFixed(1));
+    // 2. Tekanan Biogas (dalam kPa, ditambah offset +2.0: misal db -0.5 -> 1.5 kPa)
+    final pressureKpa = double.parse((r.pressureKpa + 2.0).clamp(0.0, 30.0).toStringAsFixed(2));
     SensorSeverity pressureSeverity = SensorSeverity.normal;
-    if (pressureHpa > 1100 || r.pressureKpa > 110.0) {
+    if (pressureKpa >= 10.0) {
       pressureSeverity = SensorSeverity.critical;
       _triggerAlert(
         title: 'Tekanan Biogas Kritis',
-        message: 'Tekanan reaktor mencapai ${r.pressureKpa} kPa (${pressureHpa} hPa). Buka katup pengaman segera!',
+        message: 'Tekanan reaktor mencapai ${pressureKpa} kPa (Batas maksimal 10.0 kPa). Buka katup pengaman segera!',
         severity: SensorSeverity.critical,
       );
-    } else if (pressureHpa > 1030 || r.pressureKpa > 103.0) {
+    } else if (pressureKpa >= 7.5) {
       pressureSeverity = SensorSeverity.warning;
     }
 
     final newPressHist = List<double>.from(_pressureMetric.history7Points.sublist(1))
-      ..add(pressureHpa);
+      ..add(pressureKpa);
 
     _pressureMetric = SensorMetric(
       name: 'Tekanan Biogas',
-      currentValue: pressureHpa,
-      unit: 'hPa',
-      maxValue: 1200.0,
+      currentValue: pressureKpa,
+      unit: 'kPa',
+      maxValue: 10.0,
       severity: pressureSeverity,
       history7Points: newPressHist,
       sensorType: SensorType.pressure,

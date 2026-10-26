@@ -215,7 +215,7 @@ class PdfReportService {
                   pw.Text('• Unit Biodigester: ${appState.machineName}'),
                   pw.Text('• Lokasi: ${appState.machineLocation}'),
                   pw.Text('• Kondisi Sensor: Suhu Rata-rata ${appState.temperatureMetric.currentValue}°C (Normal)'),
-                  pw.Text('• Tekanan Rata-rata: ${appState.pressureMetric.currentValue} hPa'),
+                  pw.Text('• Tekanan Rata-rata: ${appState.pressureMetric.currentValue} kPa'),
                   pw.Text('• Total Insiden Mesin: 0 insiden bulan ini'),
                 ],
               ),

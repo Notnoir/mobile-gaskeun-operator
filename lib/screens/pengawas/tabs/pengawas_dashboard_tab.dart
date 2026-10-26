@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -90,12 +90,12 @@ class _PengawasDashboardTabState extends State<PengawasDashboardTab> {
                                 ),
                               ),
                               const SizedBox(width: 4),
-                              const Text('👋', style: TextStyle(fontSize: 18)),
+                              const Text('ðŸ‘‹', style: TextStyle(fontSize: 18)),
                             ],
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Ketua RW 05 • Kelurahan Sukamaju • Periode 2024–2027',
+                            'Ketua RW 05 â€¢ Kelurahan Sukamaju â€¢ Periode 2024â€“2027',
                             style: GoogleFonts.inter(
                               fontSize: 12,
                               color: AppColors.onSurfaceVariant,
@@ -196,7 +196,7 @@ class _PengawasDashboardTabState extends State<PengawasDashboardTab> {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        '• Live Terhubung',
+                        'â€¢ Live Terhubung',
                         style: GoogleFonts.inter(
                           fontSize: 11,
                           color: AppColors.onSurfaceVariant,
@@ -252,8 +252,8 @@ class _PengawasDashboardTabState extends State<PengawasDashboardTab> {
                 child: _buildMetricCard(
                   title: 'Biogas Hasil',
                   value: Formatters.number(state.totalBiogasM3RW),
-                  unit: 'm³',
-                  subtitle: '≈ $flameHours Jam Api Warga',
+                  unit: 'mÂ³',
+                  subtitle: 'â‰ˆ $flameHours Jam Api Warga',
                   progress: 0.78,
                   progressColor: AppColors.secondaryContainer,
                   icon: Icons.local_fire_department_rounded,
@@ -379,7 +379,7 @@ class _PengawasDashboardTabState extends State<PengawasDashboardTab> {
                                           ),
                                         ),
                                         const SizedBox(width: 3),
-                                        const Text('🏆', style: TextStyle(fontSize: 10)),
+                                        const Text('ðŸ†', style: TextStyle(fontSize: 10)),
                                       ],
                                     ),
                                   ),
@@ -436,7 +436,7 @@ class _PengawasDashboardTabState extends State<PengawasDashboardTab> {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('💡', style: TextStyle(fontSize: 16)),
+                      const Text('ðŸ’¡', style: TextStyle(fontSize: 16)),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -637,7 +637,7 @@ class _PengawasDashboardTabState extends State<PengawasDashboardTab> {
                     Expanded(
                       child: _buildHealthIndicator(
                         label: 'Suhu Reaktor',
-                        value: '${state.temperatureMetric.currentValue}°C',
+                        value: '${state.temperatureMetric.currentValue}Â°C',
                         status: 'Optimal',
                         valueColor: AppColors.onSurface,
                         statusColor: AppColors.primary,
@@ -647,9 +647,7 @@ class _PengawasDashboardTabState extends State<PengawasDashboardTab> {
                     Expanded(
                       child: _buildHealthIndicator(
                         label: 'Tekanan Gas',
-                        value: state.latestReading != null
-                            ? '${state.latestReading!.pressureKpa.toStringAsFixed(2)} kPa'
-                            : '${(state.pressureMetric.currentValue / 10).toStringAsFixed(2)} kPa',
+                        value: '${state.pressureMetric.currentValue.toStringAsFixed(2)} kPa',
                         status: 'Kapasitas Pas',
                         valueColor: AppColors.secondary,
                         statusColor: AppColors.secondary,
@@ -714,7 +712,7 @@ class _PengawasDashboardTabState extends State<PengawasDashboardTab> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Unduh & cetak rekapitulasi data RT 01–06',
+                        'Unduh & cetak rekapitulasi data RT 01â€“06',
                         style: GoogleFonts.inter(
                           fontSize: 11,
                           color: AppColors.onSurfaceVariant,

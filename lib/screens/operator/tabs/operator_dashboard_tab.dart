@@ -55,7 +55,6 @@ class OperatorDashboardTab extends StatelessWidget {
     final temp = state.temperatureMetric;
     final pressure = state.pressureMetric;
     final mq4Out = state.mq4OutdoorMetric;
-    final mq4Dig = state.mq4BiodigesterMetric;
     final mq136 = state.mq136Metric;
     final alerts = state.activeAlerts;
 
@@ -171,7 +170,7 @@ class OperatorDashboardTab extends StatelessWidget {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(
-                                'Data sensor terbaru berhasil ditarik dari Firebase! (${state.temperatureMetric.currentValue}°C, ${state.pressureMetric.currentValue} hPa)',
+                                'Data sensor terbaru berhasil ditarik dari Firebase! (${state.temperatureMetric.currentValue}°C, ${state.pressureMetric.currentValue} kPa)',
                               ),
                               backgroundColor: AppColors.success,
                               behavior: SnackBarBehavior.floating,
@@ -240,14 +239,14 @@ class OperatorDashboardTab extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
-          // Row 1 — Suhu & Tekanan Gas (existing)
+          // Row 1: Suhu & Tekanan Gas
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
                 child: _buildSensorCard(
                   metric: temp,
-                  icon: Icons.thermostat,
+                  icon: Icons.thermostat_rounded,
                   lineColor: const Color(0xFF0EA5E9),
                 ),
               ),
@@ -255,13 +254,13 @@ class OperatorDashboardTab extends StatelessWidget {
               Expanded(
                 child: _buildSensorCard(
                   metric: pressure,
-                  icon: Icons.speed,
+                  icon: Icons.speed_rounded,
                   lineColor: const Color(0xFFF59E0B),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
 
           // Gas Sensor Header
           Row(
@@ -276,7 +275,7 @@ class OperatorDashboardTab extends StatelessWidget {
           ),
           const SizedBox(height: 10),
 
-          // Row 2 — MQ-4 #1 (Luar) & MQ-4 #2 (Digester)
+          // Row 2: MQ-4 Luar & MQ-136 Pasca Filter (Side-by-side, MQ4-DIG ditiadakan)
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -292,24 +291,14 @@ class OperatorDashboardTab extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: _buildSensorCard(
-                  metric: mq4Dig,
-                  icon: Icons.biotech_outlined,
-                  lineColor: const Color(0xFF8B5CF6),
-                  placementLabel: mq4Dig.sensorType.placementInfo,
-                  sensorCode: mq4Dig.sensorType.sensorCode,
+                  metric: mq136,
+                  icon: Icons.filter_alt_outlined,
+                  lineColor: const Color(0xFF10B981),
+                  placementLabel: mq136.sensorType.placementInfo,
+                  sensorCode: mq136.sensorType.sensorCode,
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: 12),
-
-          // Row 3 — MQ-136 (full width)
-          _buildSensorCard(
-            metric: mq136,
-            icon: Icons.filter_alt_outlined,
-            lineColor: const Color(0xFF10B981),
-            placementLabel: mq136.sensorType.placementInfo,
-            sensorCode: mq136.sensorType.sensorCode,
           ),
           const SizedBox(height: 20),
 
@@ -339,8 +328,8 @@ class OperatorDashboardTab extends StatelessWidget {
                 _buildGuideRow(
                   icon: Icons.warning_amber_rounded,
                   color: AppColors.warning,
-                  title: 'Batas Tekanan Aman: < 1.100 hPa',
-                  desc: 'Buka katup distribusi ke kompor warga jika tekanan mendekati 1.150 hPa.',
+                  title: 'Batas Tekanan Aman: < 8.0 kPa (Maksimal 10.0 kPa)',
+                  desc: 'Buka katup distribusi ke kompor warga jika tekanan mendekati 9.0 – 10.0 kPa.',
                 ),
                 const SizedBox(height: 8),
                 _buildGuideRow(
@@ -348,27 +337,6 @@ class OperatorDashboardTab extends StatelessWidget {
                   color: AppColors.danger,
                   title: 'MQ-4 Luar: Batas Peringatan > 40 ppm',
                   desc: 'Jika sensor luar > 40 ppm, periksa kemungkinan kebocoran saluran gas.',
-                ),
-                const SizedBox(height: 8),
-                _buildGuideRow(
-                  icon: Icons.biotech_outlined,
-                  color: const Color(0xFF8B5CF6),
-                  title: 'MQ-4 Digester: Normal 3.000 – 6.500 ppm',
-                  desc: 'Konsentrasi metana tinggi di dalam digester adalah tanda fermentasi berjalan baik.',
-                ),
-                const SizedBox(height: 8),
-                _buildGuideRow(
-                  icon: Icons.filter_alt_outlined,
-                  color: AppColors.primary,
-                  title: 'MQ-136 H₂S Pasca Filter: < 10 ppm',
-                  desc: 'Nilai H₂S pasca filter harus rendah. Ganti media filter jika > 10 ppm.',
-                ),
-                const SizedBox(height: 8),
-                _buildGuideRow(
-                  icon: Icons.info_outline,
-                  color: AppColors.info,
-                  title: 'Verifikasi Fisik Setoran',
-                  desc: 'Pastikan timbangan sesuai tiket dan tidak ada sampah anorganik.',
                 ),
               ],
             ),
@@ -442,25 +410,38 @@ class OperatorDashboardTab extends StatelessWidget {
     String? placementLabel,
     String? sensorCode,
   }) {
-    Color statusColor;
-    Color statusBg;
-    if (metric.severity == SensorSeverity.normal) {
-      statusColor = AppColors.primary;
-      statusBg = AppColors.primaryLight;
-    } else if (metric.severity == SensorSeverity.warning) {
-      statusColor = AppColors.warning;
-      statusBg = AppColors.warningLight;
-    } else {
-      statusColor = AppColors.danger;
-      statusBg = AppColors.dangerLight;
-    }
+    // Menghitung progress secara dinamis
+    final double rawRatio = metric.maxValue > 0 ? (metric.currentValue / metric.maxValue) : 0.0;
+    final double progress = rawRatio.clamp(0.0, 1.0);
 
-    final progress = (metric.currentValue / metric.maxValue).clamp(0.0, 1.0);
+    // Ketentuan warna & status:
+    // Jika nilai mencapai atau melampaui batas maksimal (misal tekanan >= 10 kPa), bar langsung full & berwarna merah.
+    // Berlaku untuk semua sensor.
+    final bool isMaxOrCritical = metric.currentValue >= metric.maxValue ||
+        metric.severity == SensorSeverity.critical ||
+        progress >= 1.0;
+    final bool isWarning = !isMaxOrCritical &&
+        (metric.severity == SensorSeverity.warning || progress >= 0.75);
 
-    // Format value: show 1 decimal for small float values, 0 decimal for large integers
-    final String valueText = metric.unit == 'ppm' && metric.currentValue >= 100
-        ? metric.currentValue.toStringAsFixed(0)
-        : metric.currentValue.toStringAsFixed(1);
+    final Color barColor = isMaxOrCritical
+        ? AppColors.danger
+        : (isWarning ? AppColors.warning : AppColors.primary);
+
+    final Color statusColor = barColor;
+    final Color statusBg = isMaxOrCritical
+        ? AppColors.dangerLight
+        : (isWarning ? AppColors.warningLight : AppColors.primaryLight);
+
+    final String statusLabel = isMaxOrCritical
+        ? (metric.currentValue >= metric.maxValue ? 'Bahaya' : 'Kritis')
+        : (isWarning ? 'Peringatan' : 'Normal');
+
+    // Format nilai
+    final String valueText = metric.unit == 'kPa'
+        ? metric.currentValue.toStringAsFixed(2)
+        : (metric.unit == 'ppm' && metric.currentValue >= 100
+            ? metric.currentValue.toStringAsFixed(0)
+            : metric.currentValue.toStringAsFixed(1));
 
     // Sparkline spots
     final spots = metric.history7Points.asMap().entries.map((e) {
@@ -472,7 +453,10 @@ class OperatorDashboardTab extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.cardBorder),
+        border: Border.all(
+          color: isMaxOrCritical ? AppColors.danger.withOpacity(0.5) : AppColors.cardBorder,
+          width: isMaxOrCritical ? 1.5 : 1.0,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -506,7 +490,7 @@ class OperatorDashboardTab extends StatelessWidget {
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
-                  metric.severity.label,
+                  statusLabel,
                   style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: statusColor),
                 ),
               ),
@@ -531,7 +515,11 @@ class OperatorDashboardTab extends StatelessWidget {
             children: [
               Text(
                 valueText,
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: isMaxOrCritical ? AppColors.danger : AppColors.textPrimary,
+                ),
               ),
               const SizedBox(width: 4),
               Text(
@@ -542,19 +530,39 @@ class OperatorDashboardTab extends StatelessWidget {
           ),
           const SizedBox(height: 8),
 
-          // Mini Gauge Progress
+          // Label Skala & Persentase Bar
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Skala: 0 – ${metric.maxValue.toStringAsFixed(metric.maxValue < 20 ? 1 : 0)} ${metric.unit}',
+                style: const TextStyle(fontSize: 9.5, color: AppColors.textMuted),
+              ),
+              Text(
+                '${(progress * 100).toInt()}%',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: barColor,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+
+          // Dynamic Gauge Progress Bar
           ClipRRect(
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(5),
             child: LinearProgressIndicator(
               value: progress,
-              minHeight: 6,
-              backgroundColor: AppColors.background,
-              valueColor: AlwaysStoppedAnimation<Color>(statusColor),
+              minHeight: 8,
+              backgroundColor: const Color(0xFFE5EEFF),
+              valueColor: AlwaysStoppedAnimation<Color>(barColor),
             ),
           ),
           const SizedBox(height: 12),
 
-          // Sparkline Chart (Histori 7 Terakhir)
+          // Sparkline Chart (Histori 7 Titik Terakhir)
           const Text('Histori 7 Titik Terakhir:', style: TextStyle(fontSize: 10, color: AppColors.textMuted)),
           const SizedBox(height: 6),
           SizedBox(
