@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -90,16 +90,8 @@ class _PengawasDashboardTabState extends State<PengawasDashboardTab> {
                                 ),
                               ),
                               const SizedBox(width: 4),
-                              const Text('ðŸ‘‹', style: TextStyle(fontSize: 18)),
+                              const Icon(Icons.waving_hand_rounded, color: Color(0xFFF59E0B), size: 18),
                             ],
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Ketua RW 05 â€¢ Kelurahan Sukamaju â€¢ Periode 2024â€“2027',
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
-                              color: AppColors.onSurfaceVariant,
-                            ),
                           ),
                         ],
                       ),
@@ -196,7 +188,7 @@ class _PengawasDashboardTabState extends State<PengawasDashboardTab> {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        'â€¢ Live Terhubung',
+                        '• Live Terhubung',
                         style: GoogleFonts.inter(
                           fontSize: 11,
                           color: AppColors.onSurfaceVariant,
@@ -252,8 +244,8 @@ class _PengawasDashboardTabState extends State<PengawasDashboardTab> {
                 child: _buildMetricCard(
                   title: 'Biogas Hasil',
                   value: Formatters.number(state.totalBiogasM3RW),
-                  unit: 'mÂ³',
-                  subtitle: 'â‰ˆ $flameHours Jam Api Warga',
+                  unit: 'm³',
+                  subtitle: '≈ $flameHours Jam Api Warga',
                   progress: 0.78,
                   progressColor: AppColors.secondaryContainer,
                   icon: Icons.local_fire_department_rounded,
@@ -348,43 +340,13 @@ class _PengawasDashboardTabState extends State<PengawasDashboardTab> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Row(
-                              children: [
-                                Text(
-                                  rt.rtName,
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 13,
-                                    fontWeight: isTop ? FontWeight.w700 : FontWeight.w600,
-                                    color: AppColors.onSurface,
-                                  ),
-                                ),
-                                if (isTop) ...[
-                                  const SizedBox(width: 6),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 7, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.primaryContainer.withOpacity(0.18),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Text(
-                                          'Juara 1',
-                                          style: GoogleFonts.plusJakartaSans(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w700,
-                                            color: AppColors.onPrimaryContainer,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 3),
-                                        const Text('ðŸ†', style: TextStyle(fontSize: 10)),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ],
+                            Text(
+                              rt.rtName,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 13,
+                                fontWeight: isTop ? FontWeight.w700 : FontWeight.w600,
+                                color: AppColors.onSurface,
+                              ),
                             ),
                             Text(
                               '${rt.participationRate.toStringAsFixed(0)}%',
@@ -436,7 +398,7 @@ class _PengawasDashboardTabState extends State<PengawasDashboardTab> {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('ðŸ’¡', style: TextStyle(fontSize: 16)),
+                      const Icon(Icons.lightbulb_outline_rounded, color: AppColors.primary, size: 20),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -637,7 +599,7 @@ class _PengawasDashboardTabState extends State<PengawasDashboardTab> {
                     Expanded(
                       child: _buildHealthIndicator(
                         label: 'Suhu Reaktor',
-                        value: '${state.temperatureMetric.currentValue}Â°C',
+                        value: '${state.temperatureMetric.currentValue}°C',
                         status: 'Optimal',
                         valueColor: AppColors.onSurface,
                         statusColor: AppColors.primary,
@@ -712,7 +674,7 @@ class _PengawasDashboardTabState extends State<PengawasDashboardTab> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Unduh & cetak rekapitulasi data RT 01â€“06',
+                        'Unduh & cetak rekapitulasi data RT 01–06',
                         style: GoogleFonts.inter(
                           fontSize: 11,
                           color: AppColors.onSurfaceVariant,
