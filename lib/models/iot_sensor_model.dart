@@ -33,11 +33,11 @@ extension SensorTypeExtension on SensorType {
       case SensorType.pressure:
         return 'Tekanan Biogas';
       case SensorType.mq4Outdoor:
-        return 'Gas Metana (Luar)';
+        return 'Gas Metana';
       case SensorType.mq4Biodigester:
         return 'Gas Metana (Digester)';
       case SensorType.mq136:
-        return 'H₂S Pasca Filter';
+        return 'Hidrogen Sulfida (H₂S)';
     }
   }
 
@@ -63,11 +63,11 @@ extension SensorTypeExtension on SensorType {
       case SensorType.pressure:
         return 'Saluran gas utama reaktor';
       case SensorType.mq4Outdoor:
-        return 'Dipasang di luar — deteksi kebocoran gas';
+        return 'Deteksi kebocoran gas metana';
       case SensorType.mq4Biodigester:
         return 'Dipasang di dalam biodigester';
       case SensorType.mq136:
-        return 'Dipasang setelah filter (post-filter H₂S)';
+        return 'Deteksi kebocoran gas hidrogen sulfida (H₂S)';
     }
   }
 }

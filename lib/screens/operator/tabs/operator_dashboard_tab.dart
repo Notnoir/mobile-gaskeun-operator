@@ -268,34 +268,30 @@ class OperatorDashboardTab extends StatelessWidget {
               Icon(Icons.gas_meter_outlined, size: 16, color: AppColors.primaryDark),
               SizedBox(width: 6),
               Text(
-                'Sensor Gas (MQ-Series)',
+                'Deteksi Kebocoran Gas',
                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primaryDark),
               ),
             ],
           ),
           const SizedBox(height: 10),
 
-          // Row 2: MQ-4 Luar & MQ-136 Pasca Filter (Side-by-side, MQ4-DIG ditiadakan)
+          // Row 2: Gas Metana & Hidrogen Sulfida (Deteksi Kebocoran Gas)
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
                 child: _buildSensorCard(
                   metric: mq4Out,
-                  icon: Icons.outdoor_grill_outlined,
+                  icon: Icons.gas_meter_outlined,
                   lineColor: const Color(0xFFEF4444),
-                  placementLabel: mq4Out.sensorType.placementInfo,
-                  sensorCode: mq4Out.sensorType.sensorCode,
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: _buildSensorCard(
                   metric: mq136,
-                  icon: Icons.filter_alt_outlined,
+                  icon: Icons.warning_amber_rounded,
                   lineColor: const Color(0xFF10B981),
-                  placementLabel: mq136.sensorType.placementInfo,
-                  sensorCode: mq136.sensorType.sensorCode,
                 ),
               ),
             ],
@@ -335,8 +331,8 @@ class OperatorDashboardTab extends StatelessWidget {
                 _buildGuideRow(
                   icon: Icons.gas_meter_outlined,
                   color: AppColors.danger,
-                  title: 'MQ-4 Luar: Batas Peringatan > 40 ppm',
-                  desc: 'Jika sensor luar > 40 ppm, periksa kemungkinan kebocoran saluran gas.',
+                  title: 'Batas Peringatan Gas: > 40 ppm (Metana & H₂S)',
+                  desc: 'Jika sensor metana atau hidrogen sulfida meningkat, periksa segera kemungkinan kebocoran pipa gas.',
                 ),
               ],
             ),

@@ -118,7 +118,7 @@ class AppState extends ChangeNotifier {
   );
 
   SensorMetric _mq4OutdoorMetric = SensorMetric(
-    name: 'Gas Metana (Luar)',
+    name: 'Gas Metana',
     currentValue: 12.0,
     unit: 'ppm',
     maxValue: 200.0,
@@ -138,7 +138,7 @@ class AppState extends ChangeNotifier {
   );
 
   SensorMetric _mq136Metric = SensorMetric(
-    name: 'H₂S Pasca Filter',
+    name: 'Hidrogen Sulfida (H₂S)',
     currentValue: 3.2,
     unit: 'ppm',
     maxValue: 50.0,
@@ -437,7 +437,7 @@ class AppState extends ChangeNotifier {
       mq4OutSeverity = SensorSeverity.warning;
     }
     _mq4OutdoorMetric = SensorMetric(
-      name: 'Gas Metana (Luar)',
+      name: 'Gas Metana',
       currentValue: newMq4Out,
       unit: 'ppm',
       maxValue: 200.0,
@@ -479,7 +479,7 @@ class AppState extends ChangeNotifier {
       mq136Severity = SensorSeverity.warning;
     }
     _mq136Metric = SensorMetric(
-      name: 'H₂S Pasca Filter',
+      name: 'Hidrogen Sulfida (H₂S)',
       currentValue: newMq136,
       unit: 'ppm',
       maxValue: 50.0,
@@ -670,7 +670,7 @@ class AppState extends ChangeNotifier {
       ..add(mq4Holder);
 
     _mq4OutdoorMetric = SensorMetric(
-      name: 'Gas Metana (Luar)',
+      name: 'Gas Metana',
       currentValue: mq4Holder,
       unit: 'ADC',
       maxValue: 1024.0,
@@ -701,14 +701,14 @@ class AppState extends ChangeNotifier {
       sensorType: SensorType.mq4Biodigester,
     );
 
-    // 5. MQ-136 Pasca Filter
+    // 5. MQ-136 Hidrogen Sulfida (H2S)
     final mq136 = r.mq136FilterAmbientRaw.toDouble();
     SensorSeverity mq136Severity = SensorSeverity.normal;
     if (mq136 > 700) {
       mq136Severity = SensorSeverity.critical;
       _triggerAlert(
         title: 'Filter Gas H₂S Jenuh',
-        message: 'Kadar gas H₂S pasca filter tinggi (ADC: ${r.mq136FilterAmbientRaw}). Media filter perlu segera diganti.',
+        message: 'Kadar gas Hidrogen Sulfida (H₂S) terdeteksi tinggi (ADC: ${r.mq136FilterAmbientRaw}). Periksa kemungkinan kebocoran gas.',
         severity: SensorSeverity.warning,
       );
     } else if (mq136 > 500) {
@@ -719,7 +719,7 @@ class AppState extends ChangeNotifier {
       ..add(mq136);
 
     _mq136Metric = SensorMetric(
-      name: 'H₂S Pasca Filter',
+      name: 'Hidrogen Sulfida (H₂S)',
       currentValue: mq136,
       unit: 'ADC',
       maxValue: 1024.0,
