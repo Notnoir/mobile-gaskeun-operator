@@ -29,11 +29,10 @@ void main() {
     expect(find.text('Masuk dengan Akun Google Petugas'), findsOneWidget);
     expect(find.text('Sistem Akses Terproteksi (Whitelist)'), findsOneWidget);
 
-    // Verify manual email & password login form is removed
-    expect(find.text('Pilih Akun Petugas:'), findsNothing);
-    expect(find.text('Email Petugas'), findsNothing);
-    expect(find.text('Kata Sandi (Password)'), findsNothing);
-    expect(find.text('Masuk ke Portal Petugas'), findsNothing);
+    // Verify demo account buttons are present in row
+    expect(find.text('Demo Pengawas RW'), findsOneWidget);
+    expect(find.text('Demo Operator'), findsOneWidget);
+    expect(find.text('Masuk dengan Email Petugas'), findsOneWidget);
 
     state.dispose();
   });
@@ -152,3 +151,4 @@ void main() {
     state.dispose();
   });
 }
+

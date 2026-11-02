@@ -41,6 +41,7 @@ class StaffRegistryService {
   /// Whitelist Pengawas RW (Default / Seed)
   static final Set<String> _pengawasEmails = {
     'huaweicloudroadtochina@gmail.com',
+    'mriza8857@gmail.com',
   };
 
   /// Whitelist UID Petugas dari Firebase Auth (opsional)

@@ -175,7 +175,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
               } else {
                 NotificationService().showNotificationBanner(
                   title: '📊 Laporan Siap (FCM Test)',
-                  body: 'Rekapitulasi partisipasi warga RW 05 bulan ini telah siap diekspor ke format PDF.',
+                  body: 'Rekapitulasi partisipasi warga RW 01 Cigending bulan ini telah siap diekspor ke format PDF.',
                   isCritical: false,
                 );
               }

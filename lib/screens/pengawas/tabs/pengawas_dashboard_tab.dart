@@ -508,7 +508,7 @@ class _PengawasDashboardTabState extends State<PengawasDashboardTab> {
           ),
           const SizedBox(height: 16),
 
-          // 4. Ringkasan Kondisi Biodigester RW 05 (FR-RW-03)
+          // 4. Ringkasan Kondisi Biodigester RW 01 Cigending (FR-RW-03)
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -532,7 +532,7 @@ class _PengawasDashboardTabState extends State<PengawasDashboardTab> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Kondisi Biodigester RW 05',
+                          'Kondisi Biodigester RW 01 Cigending',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,

@@ -23,7 +23,7 @@ extension UserRoleExtension on UserRole {
       case UserRole.operator:
         return 'Operator Biodigester';
       case UserRole.pengawas:
-        return 'Ketua RW 05';
+        return 'Ketua RW 01 Cigending';
     }
   }
 }

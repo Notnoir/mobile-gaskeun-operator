@@ -48,10 +48,10 @@ class _PengawasLaporanTabState extends State<PengawasLaporanTab> {
         year: _selectedYear,
       );
 
-      final fileName = 'Laporan_GasKeun_RW05_${_selectedMonth}_$_selectedYear.pdf';
+      final fileName = 'Laporan_GasKeun_RW01_${_selectedMonth}_$_selectedYear.pdf';
       final newReport = GeneratedReport(
         id: 'rep-${DateTime.now().millisecondsSinceEpoch}',
-        title: 'Laporan Ekosistem Biodigester RW 05',
+        title: 'Laporan Ekosistem Biodigester RW 01 Cigending',
         period: '$_selectedMonth $_selectedYear',
         fileName: fileName,
         fileSize: '425 KB',
@@ -106,7 +106,7 @@ class _PengawasLaporanTabState extends State<PengawasLaporanTab> {
           children: [
             Icon(Icons.share_rounded, color: Colors.white, size: 18),
             SizedBox(width: 8),
-            Text('Membuka draf laporan WhatsApp RW 05...'),
+            Text('Membuka draf laporan WhatsApp RW 01 Cigending...'),
           ],
         ),
         backgroundColor: AppColors.primary,
@@ -492,7 +492,7 @@ class _PengawasLaporanTabState extends State<PengawasLaporanTab> {
                                 ),
                               ),
                               Text(
-                                'Semua RT (RW 05 Terpadu)',
+                                'Semua RT (RW 01 Cigending Terpadu)',
                                 style: GoogleFonts.plusJakartaSans(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w700,
@@ -703,7 +703,7 @@ class _PengawasLaporanTabState extends State<PengawasLaporanTab> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'RUKUN WARGA 05 KELURAHAN SUKAMAJU',
+                            'RUKUN WARGA 01 KELURAHAN CIGENDING',
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 12,
                               fontWeight: FontWeight.w800,
@@ -712,7 +712,7 @@ class _PengawasLaporanTabState extends State<PengawasLaporanTab> {
                             ),
                           ),
                           Text(
-                            'Kecamatan Cilodong • Kota Depok • Jawa Barat 16415',
+                            'Kecamatan Ujungberung • Kota Bandung • Jawa Barat',
                             style: GoogleFonts.inter(
                               fontSize: 9.5,
                               color: AppColors.onSurfaceVariant,
@@ -749,7 +749,7 @@ class _PengawasLaporanTabState extends State<PengawasLaporanTab> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'No: 082/RW-05/GK-OPS/X/2026',
+                        'No: 082/RW-01/GK-OPS/X/2026',
                         style: GoogleFonts.inter(
                           fontSize: 9.5,
                           fontWeight: FontWeight.w600,
@@ -790,7 +790,7 @@ class _PengawasLaporanTabState extends State<PengawasLaporanTab> {
                             ),
                           ),
                           Text(
-                            'Nilai RW 05',
+                            'Nilai RW 01',
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 10,
                               fontWeight: FontWeight.w700,
@@ -838,7 +838,7 @@ class _PengawasLaporanTabState extends State<PengawasLaporanTab> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            'Sukamaju, 31 Oktober 2026',
+                            'Cigending, 31 Oktober 2026',
                             style: GoogleFonts.inter(
                               fontSize: 9,
                               color: AppColors.onSurfaceVariant,
@@ -911,7 +911,7 @@ class _PengawasLaporanTabState extends State<PengawasLaporanTab> {
                                 ),
                               ),
                               Text(
-                                'Ketua RW 05 Sukamaju',
+                                'Ketua RW 01 Cigending',
                                 style: GoogleFonts.inter(
                                   fontSize: 8.5,
                                   color: AppColors.onSurfaceVariant,

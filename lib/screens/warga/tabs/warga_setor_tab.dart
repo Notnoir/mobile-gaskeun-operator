@@ -55,14 +55,14 @@ class _WargaSetorTabState extends State<WargaSetorTab> {
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Membuka rute ke Fasilitas Biodigester RW 05...')),
+            const SnackBar(content: Text('Membuka rute ke Fasilitas Biodigester RW 01 Cigending...')),
           );
         }
       }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Menavigasi ke Fasilitas Biodigester RW 05')),
+          const SnackBar(content: Text('Menavigasi ke Fasilitas Biodigester RW 01 Cigending')),
         );
       }
     }

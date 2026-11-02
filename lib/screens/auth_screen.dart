@@ -16,8 +16,90 @@ class AuthScreen extends StatefulWidget {
 }
 
 class _AuthScreenState extends State<AuthScreen> {
+  final _formKeyLogin = GlobalKey<FormState>();
+  final TextEditingController _emailController =
+      TextEditingController(text: 'pengawas@gaskeun.id');
+  final TextEditingController _passwordController =
+      TextEditingController(text: 'password123');
+
+  bool _showEmailForm = false;
+  bool _obscurePassword = true;
   bool _isLoading = false;
   String? _errorMessage;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  void _selectDemoAccount(DemoUserCredential cred, {bool autoLogin = false}) {
+    setState(() {
+      _emailController.text = cred.email;
+      _passwordController.text = cred.password;
+      _errorMessage = null;
+    });
+
+    if (autoLogin) {
+      setState(() => _isLoading = true);
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (!mounted) return;
+        final appState = context.read<AppState>();
+        final isSuccess = appState.login(cred.email, cred.password);
+        setState(() => _isLoading = false);
+
+        if (isSuccess) {
+          final profile = appState.activeProfile;
+          final roleLabel = appState.currentRole == UserRole.pengawas
+              ? 'Pengawas RW'
+              : 'Operator Lapangan';
+          _showSuccessNotification('Selamat datang, ${profile.name} ($roleLabel)!');
+          widget.onLoginSuccess?.call();
+        } else {
+          setState(() {
+            _errorMessage = 'Gagal masuk dengan akun demo ${cred.roleLabel}.';
+          });
+        }
+      });
+    } else {
+      setState(() => _showEmailForm = true);
+    }
+  }
+
+  void _handleEmailLogin() {
+    setState(() => _errorMessage = null);
+
+    if (!_formKeyLogin.currentState!.validate()) return;
+
+    setState(() => _isLoading = true);
+
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    Future.delayed(const Duration(milliseconds: 350), () {
+      if (!mounted) return;
+
+      final appState = context.read<AppState>();
+      final isSuccess = appState.login(email, password);
+
+      setState(() => _isLoading = false);
+
+      if (isSuccess) {
+        final profile = appState.activeProfile;
+        final roleLabel = appState.currentRole == UserRole.pengawas
+            ? 'Pengawas RW'
+            : 'Operator Lapangan';
+        _showSuccessNotification('Selamat datang, ${profile.name} ($roleLabel)!');
+        widget.onLoginSuccess?.call();
+      } else {
+        setState(() {
+          _errorMessage =
+              'Email atau kata sandi tidak sesuai. Pastikan akun terdaftar di whitelist petugas atau gunakan tombol demo akun.';
+        });
+      }
+    });
+  }
 
   Future<void> _handleGoogleAuth() async {
     setState(() {
@@ -75,6 +157,7 @@ class _AuthScreenState extends State<AuthScreen> {
         targetRole = authorizedRoles.first;
       }
 
+      if (!mounted) return;
       final appState = context.read<AppState>();
       await appState.loginWithGoogleAccount(
         email: authResult.email,
@@ -439,6 +522,30 @@ class _AuthScreenState extends State<AuthScreen> {
                                   _buildGoogleButton(),
                                   const SizedBox(height: 14),
 
+                                  // Divider Line with 'atau'
+                                  Row(
+                                    children: const [
+                                      Expanded(child: Divider(color: Color(0xFFF1F5F9), thickness: 1.2)),
+                                      Padding(
+                                        padding: EdgeInsets.symmetric(horizontal: 10),
+                                        child: Text(
+                                          'atau coba akun demo',
+                                          style: TextStyle(
+                                            fontSize: 11.5,
+                                            color: Color(0xFF94A3B8),
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ),
+                                      Expanded(child: Divider(color: Color(0xFFF1F5F9), thickness: 1.2)),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
+
+                                  // Email & Demo Account Section
+                                  _buildEmailLoginSection(),
+                                  const SizedBox(height: 16),
+
                                   // Whitelist Security Card
                                   Container(
                                     padding: const EdgeInsets.all(12),
@@ -566,6 +673,282 @@ class _AuthScreenState extends State<AuthScreen> {
             ],
           );
         },
+      ),
+    );
+  }
+
+  // ==================== EMAIL & DEMO SECTION ====================
+  Widget _buildEmailLoginSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Two Demo Buttons in One Row (Side-by-side, button styled)
+        Row(
+          children: [
+            Expanded(
+              child: _buildDemoButton(
+                role: UserRole.pengawas,
+                title: 'Demo Pengawas RW',
+                subtitle: 'Ketua RW • Klik Masuk',
+                icon: Icons.assessment_rounded,
+                color: Colors.deepPurple,
+                backgroundColor: const Color(0xFFFAF5FF),
+                borderColor: const Color(0xFFC084FC),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _buildDemoButton(
+                role: UserRole.operator,
+                title: 'Demo Operator',
+                subtitle: 'Teknisi IoT • Klik Masuk',
+                icon: Icons.precision_manufacturing_rounded,
+                color: const Color(0xFF0F766E),
+                backgroundColor: const Color(0xFFECFDF5),
+                borderColor: const Color(0xFFA7F3D0),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+
+        // Collapsible Email Form
+        if (_showEmailForm) ...[
+          Form(
+            key: _formKeyLogin,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Email Field
+                TextFormField(
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  style: const TextStyle(fontSize: 13.5, color: Color(0xFF1E293B)),
+                  decoration: InputDecoration(
+                    hintText: 'Alamat Email Petugas',
+                    hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
+                    prefixIcon: const Icon(Icons.mail_outline_rounded, color: Color(0xFF0F766E), size: 20),
+                    filled: true,
+                    fillColor: const Color(0xFFF8FAFC),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: Color(0xFF0F766E), width: 1.5),
+                    ),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) return 'Email wajib diisi';
+                    if (!value.contains('@')) return 'Format email tidak valid';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 10),
+
+                // Password Field
+                TextFormField(
+                  controller: _passwordController,
+                  obscureText: _obscurePassword,
+                  style: const TextStyle(fontSize: 13.5, color: Color(0xFF1E293B)),
+                  decoration: InputDecoration(
+                    hintText: 'Kata Sandi',
+                    hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
+                    prefixIcon: const Icon(Icons.lock_outline_rounded, color: Color(0xFF0F766E), size: 20),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                        color: const Color(0xFF94A3B8),
+                        size: 20,
+                      ),
+                      onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                    ),
+                    filled: true,
+                    fillColor: const Color(0xFFF8FAFC),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: Color(0xFF0F766E), width: 1.5),
+                    ),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) return 'Kata sandi wajib diisi';
+                    if (value.trim().length < 6) return 'Minimal 6 karakter';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+              ],
+            ),
+          ),
+        ],
+
+        // Primary Email Action Button
+        SizedBox(
+          width: double.infinity,
+          height: 48,
+          child: ElevatedButton.icon(
+            onPressed: _isLoading
+                ? null
+                : () {
+                    if (!_showEmailForm) {
+                      setState(() => _showEmailForm = true);
+                    } else {
+                      _handleEmailLogin();
+                    }
+                  },
+            icon: _isLoading
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  )
+                : const Icon(Icons.mail_outline_rounded, size: 20, color: Colors.white),
+            label: Text(
+              _showEmailForm ? 'Masuk Sekarang' : 'Masuk dengan Email Petugas',
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+                letterSpacing: -0.2,
+              ),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF0F766E),
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+          ),
+        ),
+        if (_showEmailForm) ...[
+          const SizedBox(height: 6),
+          Center(
+            child: TextButton(
+              onPressed: () => setState(() => _showEmailForm = false),
+              style: TextButton.styleFrom(
+                visualDensity: VisualDensity.compact,
+                foregroundColor: const Color(0xFF64748B),
+              ),
+              child: const Text(
+                'Sembunyikan Form Email',
+                style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w500),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildDemoButton({
+    required UserRole role,
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color color,
+    required Color backgroundColor,
+    required Color borderColor,
+  }) {
+    return Material(
+      color: backgroundColor,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: _isLoading
+            ? null
+            : () {
+                final cred = AppState.demoCredentials.firstWhere(
+                  (c) => c.role == role,
+                  orElse: () => AppState.demoCredentials.first,
+                );
+                _selectDemoAccount(cred, autoLogin: true);
+              },
+        borderRadius: BorderRadius.circular(14),
+        splashColor: color.withValues(alpha: 0.15),
+        highlightColor: color.withValues(alpha: 0.08),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: borderColor, width: 1.5),
+            boxShadow: [
+              BoxShadow(
+                color: color.withValues(alpha: 0.06),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: color, size: 18),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text('⚡', style: TextStyle(fontSize: 11)),
+                          const SizedBox(width: 3),
+                          Text(
+                            title,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                              color: color,
+                              letterSpacing: -0.2,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        subtitle,
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: Color(0xFF64748B),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

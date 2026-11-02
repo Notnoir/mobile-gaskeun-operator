@@ -42,7 +42,7 @@ class PdfReportService {
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
                       pw.Text(
-                        'GASKEUN RW 05',
+                        'GASKEUN RW 01 CIGENDING',
                         style: pw.TextStyle(
                           fontSize: 20,
                           fontWeight: pw.FontWeight.bold,
@@ -58,7 +58,7 @@ class PdfReportService {
                         ),
                       ),
                       pw.Text(
-                        'Kelurahan Sukajaya, Kecamatan Mandiri — Wilayah RW 05',
+                        'Kelurahan Cigending, Kecamatan Ujungberung — Wilayah RW 01',
                         style: const pw.TextStyle(
                           fontSize: 9,
                           color: PdfColors.grey600,
@@ -230,10 +230,10 @@ class PdfReportService {
                   crossAxisAlignment: pw.CrossAxisAlignment.center,
                   children: [
                     pw.Text('Mengetahui,', style: const pw.TextStyle(fontSize: 10)),
-                    pw.Text('Ketua RW 05', style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold)),
+                    pw.Text('Ketua RW 01 Cigending', style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold)),
                     pw.SizedBox(height: 40),
                     pw.Text('( Bu Sari Handayani )', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                    pw.Text('ID: RW-05-SRI', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600)),
+                    pw.Text('ID: RW-01-SRI', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600)),
                   ],
                 ),
                 pw.Column(

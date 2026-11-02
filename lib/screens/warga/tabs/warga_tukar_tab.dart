@@ -132,7 +132,7 @@ class WargaTukarTab extends StatelessWidget {
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Ambil produk di Fasilitas Biodigester RW 05 pada jam operasional (08:00 - 17:00 WIB).',
+                      'Ambil produk di Fasilitas Biodigester RW 01 Cigending pada jam operasional (08:00 - 17:00 WIB).',
                       style: TextStyle(fontSize: 11, color: AppColors.primaryDark),
                     ),
                   ),
